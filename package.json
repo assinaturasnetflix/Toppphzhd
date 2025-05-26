@@ -1,22 +1,22 @@
 {
-  "name": "meu-backend-pagamento",
+  "name": "meu-servico-pagamento",
   "version": "1.0.0",
-  "description": "Backend para processar pagamentos com MozPayment e fornecer link do WhatsApp.",
+  "description": "Backend para processar pagamentos com MozPayment",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "pagamento",
     "mozpayment",
-    "whatsapp",
-    "api"
+    "emola",
+    "pagamento",
+    "backend"
   ],
-  "author": "Seu Nome Aqui",
+  "author": "Seu Nome",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.19.2",
-    "node-fetch": "^2.7.0"
+    "body-parser": "^1.20.2",
+    "express": "^4.19.2"
   }
 }
