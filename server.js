@@ -1,85 +1,120 @@
 const express = require('express');
-const fetch = require('node-fetch'); // Ou use o fetch global se estiver no Node.js 18+
+const bodyParser = require('body-parser');
+const https = require('https'); // Ou use 'axios'
+
 const app = express();
-const port = 3000; // Você pode escolher outra porta
+const port = 3000;
 
-// Middleware para parsear JSON no corpo das requisições
-app.use(express.json());
+app.use(bodyParser.json());
 
-// Endpoint que o frontend vai chamar
-app.post('/pagar', async (req, res) => {
-    const { numero, quem_comprou, valor } = req.body;
+// --- Configurações Seguras do Backend ---
+// ESTES VALORES NUNCA DEVEM IR PARA O FRONTEND
+// Idealmente, viriam de variáveis de ambiente (process.env.MOZPAYMENT_CARTEIRA_ID)
+const MOZPAYMENT_CARTEIRA_ID = '1746519798335x143095610732969980'; // SEU ID DE CARTEIRA REAL
+const VALOR_PLANO_PREMIUM = '1.00'; // VALOR DO PLANO ESPECÍFICO
+const MOZPAYMENT_API_URL = 'https://mozpayment.co.mz/api/1.1/wf/pagamentorotativoemola';
+const WHATSAPP_NUMBER_FOR_LINK = '865097696';
 
-    // Validação básica dos dados recebidos
-    if (!numero || !quem_comprou || !valor) {
-        return res.status(400).json({ error: 'Dados incompletos.' });
+// Servir o frontend (opcional, para desenvolvimento)
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html'); // Assume que index.html está no mesmo diretório
+});
+
+// Endpoint específico para o Plano Premium
+app.post('/api/processar-pagamento-plano-premium', async (req, res) => {
+    const { numero, quem_comprou } = req.body; // Recebe apenas dados não sensíveis
+
+    if (!numero || !quem_comprou) {
+        return res.status(400).json({ payment_success: 'no', message: 'Número de telefone e nome são obrigatórios.' });
     }
 
-    const idCarteira = '1746519798335x143095610732969980'; // Seu ID da carteira
-    const apiUrl = 'https://mozpayment.co.mz/api/1.1/wf/pagamentorotativoemola';
+    // Dados para a API MozPayment, agora com 'carteira' e 'valor' vindos do backend
+    const paymentData = JSON.stringify({
+        carteira: MOZPAYMENT_CARTEIRA_ID,       // Do backend
+        numero: numero,                         // Do frontend
+        'quem comprou': quem_comprou,           // Do frontend (atenção ao espaço no nome da chave)
+        valor: VALOR_PLANO_PREMIUM              // Do backend
+    });
 
-    const payload = {
-        carteira: idCarteira,
-        numero: numero,
-        'quem comprou': quem_comprou, // Atenção ao nome do parâmetro com espaço
-        valor: valor
-    };
+    console.log('Preparando para enviar para MozPayment:', paymentData);
 
-    console.log('Enviando para MozPayment:', payload);
-
+    // --- Lógica de Chamada à API MozPayment (SIMULAÇÃO OU REAL) ---
+    // Substitua a simulação pela chamada real à API
     try {
-        const mozPaymentResponse = await fetch(apiUrl, {
+        // SIMULAÇÃO (REMOVA/SUBSTITUA ESTE BLOCO EM PRODUÇÃO)
+        const simulateMozPaymentCall = () => new Promise(resolve => {
+            setTimeout(() => {
+                const isSuccess = Math.random() > 0.2; // 80% de chance de sucesso para teste
+                if (isSuccess) {
+                    console.log('Simulação MozPayment: Aprovado');
+                    resolve({ success: 'yes' });
+                } else {
+                    console.log('Simulação MozPayment: Reprovado');
+                    resolve({ success: 'no', reason: 'Falha simulada' });
+                }
+            }, 1500);
+        });
+        const paymentApiResponse = await simulateMozPaymentCall(); // Use a chamada real aqui
+
+        /*
+        // EXEMPLO DE CHAMADA REAL COM 'https' (simplificado)
+        // Use 'axios' ou similar para uma melhor experiência em produção
+        const options = {
+            hostname: 'mozpayment.co.mz', // Verifique o domínio correto
+            path: '/api/1.1/wf/pagamentorotativoemola',
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // Adicione quaisquer outros headers necessários pela API da MozPayment (ex: Chave de API, se houver)
-            },
-            body: JSON.stringify(payload)
-        });
-
-        // Verifica se a resposta da MozPayment foi OK (status 2xx)
-        if (!mozPaymentResponse.ok) {
-            const errorText = await mozPaymentResponse.text();
-            console.error('Erro da API MozPayment:', mozPaymentResponse.status, errorText);
-            // Tenta parsear como JSON se possível, caso contrário usa o texto do erro
-            try {
-                const errorJson = JSON.parse(errorText);
-                return res.status(mozPaymentResponse.status).json({ error: `Erro da MozPayment: ${errorJson.message || errorText}` });
-            } catch (e) {
-                return res.status(mozPaymentResponse.status).json({ error: `Erro da MozPayment: ${errorText}` });
+                'Content-Length': paymentData.length,
+                // Outros headers que a MozPayment possa exigir (ex: API Key)
             }
-        }
+        };
 
-        const resultadoPagamento = await mozPaymentResponse.json();
-        console.log('Resposta da MozPayment:', resultadoPagamento);
+        const paymentApiResponse = await new Promise((resolve, reject) => {
+            const apiReq = https.request(options, apiRes => {
+                let responseBody = '';
+                apiRes.on('data', chunk => responseBody += chunk);
+                apiRes.on('end', () => {
+                    try {
+                        resolve(JSON.parse(responseBody));
+                    } catch (e) {
+                        reject(new Error('Falha ao parsear resposta da MozPayment: ' + responseBody));
+                    }
+                });
+            });
+            apiReq.on('error', error => reject(error));
+            apiReq.write(paymentData);
+            apiReq.end();
+        });
+        */
 
-        if (resultadoPagamento.success && resultadoPagamento.success.toLowerCase() === 'yes') {
-            // Pagamento aprovado
-            const numeroWhatsApp = '258865097696'; // Número para o qual o link do WhatsApp será gerado (com código do país)
-            const mensagemWhatsApp = encodeURIComponent('Olá! Adquiri o plano e meu pagamento foi aprovado.'); // Mensagem opcional
-            const linkWhatsapp = `https://wa.me/${numeroWhatsApp}?text=${mensagemWhatsApp}`;
+        console.log('Resposta da MozPayment (simulada ou real):', paymentApiResponse);
 
-            res.json({ linkWhatsapp: linkWhatsapp });
+        if (paymentApiResponse.success === 'yes') {
+            const whatsappLink = `https://wa.me/258${WHATSAPP_NUMBER_FOR_LINK}?text=${encodeURIComponent(`Olá, meu pagamento para o Plano Premium foi aprovado! Comprador: ${quem_comprou}, Número: ${numero}`)}`;
+            res.json({
+                payment_success: 'yes',
+                message: 'Pagamento aprovado!',
+                whatsapp_link: whatsappLink
+            });
         } else {
-            // Pagamento reprovado ou resposta inesperada
-            res.status(400).json({ error: resultadoPagamento.message || 'Pagamento reprovado pela MozPayment.' });
+            res.status(402).json({ // 402 Payment Required pode ser mais semântico para falha de pagamento
+                payment_success: 'no',
+                message: `Pagamento reprovado. ${paymentApiResponse.reason || 'Motivo não especificado.'}`
+            });
         }
 
     } catch (error) {
-        console.error('Erro ao processar pagamento no backend:', error);
-        res.status(500).json({ error: 'Erro interno no servidor.' });
+        console.error('Erro crítico ao processar pagamento:', error.message);
+        res.status(500).json({
+            payment_success: 'no',
+            message: 'Erro interno do servidor ao tentar processar o pagamento.'
+        });
     }
 });
 
-// Para servir o arquivo HTML do frontend (opcional, pode ser servido separadamente)
-// Coloque o arquivo HTML (ex: index.html) na mesma pasta ou numa pasta 'public'
-// const path = require('path');
-// app.use(express.static(path.join(__dirname))); // Serve arquivos da raiz
-// app.get('/', (req, res) => {
-//    res.sendFile(path.join(__dirname, 'index.html'));
-// });
-
-
 app.listen(port, () => {
-    console.log(`Servidor backend rodando em http://localhost:${port}`);
+    console.log(`Servidor backend a rodar em http://localhost:${port}`);
+    console.log(`Frontend (se servido): http://localhost:${port}/`);
+    console.log(`--- ATENÇÃO: MOZPAYMENT_CARTEIRA_ID e VALOR_PLANO_PREMIUM estão hardcoded. Em produção, use variáveis de ambiente! ---`);
 });
