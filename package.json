@@ -1,16 +1,22 @@
 {
-  "name": "emola-payment-backend",
+  "name": "meu-backend-pagamento",
   "version": "1.0.0",
-  "description": "Backend simples para pagamento com Emola e envio de link WhatsApp",
+  "description": "Backend para processar pagamentos com MozPayment e fornecer link do WhatsApp.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Seu Nome",
-  "license": "MIT",
+  "keywords": [
+    "pagamento",
+    "mozpayment",
+    "whatsapp",
+    "api"
+  ],
+  "author": "Seu Nome Aqui",
+  "license": "ISC",
   "dependencies": {
-    "axios": "^1.4.0",
-    "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.19.2",
+    "node-fetch": "^2.7.0"
   }
 }
