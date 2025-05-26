@@ -20,63 +20,72 @@ app.post('/api/efetuar-pagamento', async (req, res) => {
         return res.status(400).json({ message: 'Número e nome do comprador são obrigatórios.' });
     }
 
-    // Montando o corpo da requisição CONFORME A ESTRUTURA SOLICITADA,
-    // com os dados dentro de um objeto "parameter"
+    // Montando o corpo da requisição com os parâmetros no nível raiz do JSON
     const payloadParaMozPayment = {
-        parameter: { // Chave principal "parameter"
-            carteira: CARTEIRA_ID,
-            numero: numero,
-            "quem comprou": quemComprou, // Mantendo a chave com espaço
-            valor: VALOR_FIXO
-        }
+        carteira: CARTEIRA_ID,
+        numero: numero, // Se a API esperar "número" com acento, ajuste aqui. Por padrão, chaves JSON não usam acentos.
+        "quem comprou": quemComprou, // Mantendo a chave com espaço, conforme o original
+        valor: VALOR_FIXO
     };
 
-    console.log('Enviando para MozPayment:', JSON.stringify(payloadParaMozPayment, null, 2));
+    // No seu log, os campos "parâmetro" e "número" aparecem com acentos.
+    // Se a API da MozPayment REALMENTE espera esses acentos NAS CHAVES JSON,
+    // você teria que fazer:
+    // const payloadParaMozPayment = {
+    //     "carteira": CARTEIRA_ID,
+    //     "número": numero, // <--- Chave com acento, se necessário
+    //     "quem comprou": quemComprou,
+    //     "valor": VALOR_FIXO
+    // };
+    // No entanto, é mais comum que as chaves JSON sejam em inglês e sem caracteres especiais/acentos.
+    // Vou manter "numero" sem acento por enquanto, pois é mais padrão.
+    // A chave "quem comprou" já está com espaço conforme a sua especificação original.
+
+    console.log('Enviando para MozPayment (estrutura plana):', JSON.stringify(payloadParaMozPayment, null, 2));
 
     try {
         const response = await axios.post(MOZPAYMENT_API_URL, payloadParaMozPayment, {
             headers: {
                 'Content-Type': 'application/json'
-                // Adicione aqui quaisquer outros cabeçalhos necessários pela API da MozPayment
             }
         });
 
         console.log('Resposta da MozPayment:', response.status, response.data);
 
-        // Tratamento de respostas da API MozPayment (200, 201, etc.)
         if (response.status === 200) {
             return res.status(200).json({ message: 'Pagamento Realizado com Sucesso', data: response.data });
-        } else if (response.status === 201) { // Conforme sua documentação: Erro na Transação
+        } else if (response.status === 201) {
              return res.status(201).json({ message: 'Erro na Transação (API retornou 201)', errorDetails: response.data });
         } else {
             return res.status(response.status).json({ message: 'Resposta inesperada da API de pagamento', data: response.data });
         }
 
     } catch (error) {
-        console.error('Erro ao chamar a API MozPayment:', error.response ? JSON.stringify(error.response.data, null, 2) : error.message);
+        // Formatando a saída do erro para corresponder ao formato do seu log
+        const errorResponse = {
+            "código de status": error.response ? error.response.status : 500,
+            "corpo": error.response ? error.response.data : { message: error.message }
+        };
+        console.error('Erro ao chamar a API MozPayment:', JSON.stringify(errorResponse, null, 2));
+
 
         if (error.response) {
             const statusCode = error.response.status;
             let message = 'Erro desconhecido na transação.';
+            const errorData = error.response.data;
 
-            if (statusCode === 400) { // PIN Errado ou dados inválidos
-                message = 'PIN Errado ou dados inválidos fornecidos à MozPayment.';
-            } else if (statusCode === 422) { // Saldo Insuficiente
+            if (errorData && errorData.message) { // Usar a mensagem da API se disponível
+                message = errorData.message;
+            } else if (statusCode === 400) {
+                message = 'PIN Errado ou dados inválidos fornecidos à MozPayment (verifique se todos os campos estão corretos e no formato esperado pela API).';
+            } else if (statusCode === 422) {
                 message = 'Saldo Insuficiente.';
-            } else if (statusCode === 201) { // Se o catch pegar um 201 (embora axios geralmente não erre em 2xx)
+            } else if (statusCode === 201) {
                  message = 'Erro na Transação (API retornou 201 e foi tratado como erro).';
             } else {
-                // Tenta pegar uma mensagem mais específica do corpo do erro, se houver
-                const errorData = error.response.data;
-                if (typeof errorData === 'object' && errorData !== null && errorData.message) {
-                    message = errorData.message;
-                } else if (typeof errorData === 'string' && errorData.length > 0) {
-                    message = errorData;
-                } else {
-                    message = `Erro na API de Pagamento: Status ${statusCode}`;
-                }
+                 message = `Erro na API de Pagamento: Status ${statusCode}`;
             }
-            return res.status(statusCode).json({ message: message, errorDetails: error.response.data });
+            return res.status(statusCode).json({ message: message, errorDetails: errorData });
         } else if (error.request) {
             return res.status(500).json({ message: 'Nenhuma resposta da API de pagamento.' });
         } else {
@@ -86,5 +95,5 @@ app.post('/api/efetuar-pagamento', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Servidor backend rodando na porta ${PORT}`);
+    console.log(`Servidor backend rodando na porta ${PORT} em ${new Date().toString()}`);
 });
