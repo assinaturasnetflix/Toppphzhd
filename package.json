@@ -1,7 +1,7 @@
 {
-  "name": "meu-servico-pagamento",
+  "name": "mozpayment-backend",
   "version": "1.0.0",
-  "description": "Backend para processar pagamentos com MozPayment",
+  "description": "Backend para processar pagamentos com a API MozPayment",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,14 +9,15 @@
   },
   "keywords": [
     "mozpayment",
-    "emola",
+    "mpesa",
     "pagamento",
-    "backend"
+    "api"
   ],
-  "author": "Seu Nome",
+  "author": "Seu Nome ou Nome da Empresa",
   "license": "ISC",
   "dependencies": {
-    "body-parser": "^1.20.2",
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
     "express": "^4.19.2"
   }
 }
