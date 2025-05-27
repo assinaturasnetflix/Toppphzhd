@@ -43,27 +43,11 @@ const EMOLA_API_URL = process.env.EMOLA_API_URL;
 const PAYMENT_WALLET_ID = process.env.PAYMENT_WALLET_ID;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Placeholder para rotas e lógica que virão depois
-// ... models ...
-// ... middlewares de autenticação ...
-// ... rotas ...
-
 // Definição da porta do servidor
 const PORT = process.env.PORT || 3000;
 
-// A inicialização do servidor (app.listen) será adicionada no final do arquivo.
-// Por enquanto, esta é a configuração base.
-
-// Placeholder para a função de criar admin padrão
-async function createDefaultAdmin() {
-    // Esta função será implementada na próxima parte, junto com o modelo User
-    console.log("Verificando/criando admin padrão...");
-}
-
 console.log("Configuração inicial do server.js carregada.");
 // server.js (continuação)
-
-// ... (código anterior: importações, conexão com DB, etc.) ...
 
 // ============================
 // SCHEMAS E MODELS DO MONGODB
@@ -90,7 +74,6 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-    // O histórico de assinaturas será gerenciado através do modelo Order
 });
 
 // Middleware pré-save para criptografar a senha antes de salvar
@@ -116,13 +99,13 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, "O nome do produto é obrigatório."],
         trim: true,
-        unique: true, // Garante que não haja produtos com o mesmo nome
+        unique: true, 
     },
     description: {
         type: String,
         required: [true, "A descrição do produto é obrigatória."],
     },
-    image: { // Pode ser uma URL ou o caminho de um arquivo local (gerenciado pelo front/admin)
+    image: { 
         type: String,
         required: [true, "A imagem do produto é obrigatória."],
     },
@@ -131,16 +114,15 @@ const productSchema = new mongoose.Schema({
         required: [true, "O preço do produto é obrigatório."],
         min: [0, "O preço não pode ser negativo."],
     },
-    // tipo: 'assinatura' ou 'giftcard' - podemos adicionar se necessário para diferenciar
-    category: { // Ex: "Streaming de Vídeo", "Música", "Games", "Gift Cards"
+    category: { 
         type: String,
         required: [true, "A categoria do produto é obrigatória."],
     },
-    estimatedDeliveryTime: { // Em minutos
+    estimatedDeliveryTime: { 
         type: String,
         default: "Máximo 10 minutos",
     },
-    isActive: { // Para controlar se o produto está ativo para venda
+    isActive: { 
         type: Boolean,
         default: true,
     },
@@ -164,8 +146,8 @@ const orderSchema = new mongoose.Schema({
         ref: 'Product',
         required: true,
     },
-    productName: String, // Para facilitar a exibição no histórico sem popular sempre
-    productImage: String, // Para facilitar a exibição
+    productName: String, 
+    productImage: String, 
     quantity: {
         type: Number,
         default: 1,
@@ -174,16 +156,16 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
-    paymentMethod: { // 'mpesa' ou 'emola'
+    paymentMethod: { 
         type: String,
         enum: ['mpesa', 'emola', 'pending'],
         default: 'pending',
     },
-    paymentStatus: { // 'pending', 'paid', 'failed', 'processing_credentials'
+    paymentStatus: { 
         type: String,
         default: 'pending',
     },
-    transactionId: { // ID da transação da API de pagamento
+    transactionId: { 
         type: String,
     },
     orderDate: {
@@ -197,32 +179,32 @@ const orderSchema = new mongoose.Schema({
             type: String,
             enum: ['pending_admin_input', 'delivered', 'error_delivering'],
             default: 'pending_admin_input'
-        } // 'pending_admin_input', 'delivered'
+        } 
     },
-    buyerInfo: { // Informações fornecidas no momento do pagamento
+    buyerInfo: { 
         phoneNumber: String,
         name: String,
     }
 });
 
 const Order = mongoose.model('Order', orderSchema);
-
+// server.js (continuação)
 
 // -------- ESQUEMA E MODELO DE BANNER (Banner) --------
 const bannerSchema = new mongoose.Schema({
-    title: { // Título opcional para o banner (uso interno ou display)
+    title: { 
         type: String,
         trim: true,
     },
-    imageUrl: { // URL da imagem ou caminho do arquivo (se hospedado localmente)
+    imageUrl: { 
         type: String,
         required: [true, "A URL da imagem do banner é obrigatória."],
     },
-    linkUrl: { // URL de destino ao clicar no banner (opcional)
+    linkUrl: { 
         type: String,
         trim: true,
     },
-    type: { // 'main' para banners principais, 'promotion' para banners de promoção
+    type: { 
         type: String,
         enum: ['main', 'promotion'],
         default: 'main',
@@ -251,7 +233,7 @@ const countdownSchema = new mongoose.Schema({
         type: Date,
         required: [true, "A data final do cronômetro é obrigatória."],
     },
-    description: { // Descrição opcional
+    description: { 
         type: String,
         trim: true,
     },
@@ -279,15 +261,15 @@ const promotionSchema = new mongoose.Schema({
         type: String,
         required: [true, "A descrição da promoção é obrigatória."],
     },
-    bannerOrVideoUrl: { // URL da imagem/vídeo ou caminho do arquivo
+    bannerOrVideoUrl: { 
         type: String,
         required: [true, "O banner ou vídeo da promoção é obrigatório."],
     },
-    isVide: {
+    isVide: { // Nota: 'isVide' parece um typo, talvez devesse ser 'isVideo'? Mantive como está no seu original.
         type: Boolean,
-        default: false, // true se for um vídeo, false se for uma imagem/banner
+        default: false, 
     },
-    linkUrl: { // Link opcional para a promoção
+    linkUrl: { 
         type: String,
         trim: true,
     },
@@ -312,8 +294,9 @@ const Promotion = mongoose.model('Promotion', promotionSchema);
 
 console.log("Schemas e Models do MongoDB definidos.");
 
-// Agora vamos implementar a função createDefaultAdmin
+// Implementação da função createDefaultAdmin
 async function createDefaultAdmin() {
+    console.log("Verificando/criando admin padrão..."); // Movido para o início da função
     try {
         const adminExists = await User.findOne({ isAdmin: true });
         if (!adminExists) {
@@ -325,15 +308,14 @@ async function createDefaultAdmin() {
                 return;
             }
 
-            // Validação básica do número de telefone do admin
-            if (!validator.isMobilePhone(adminPhoneNumber, 'any', { strictMode: false })) {
+            if (!validator.isMobilePhone(adminPhoneNumber.toString(), 'any', { strictMode: false })) {
                 console.warn(`Número de telefone do admin padrão ('${adminPhoneNumber}') inválido. Admin padrão não será criado.`);
                 return;
             }
 
             const defaultAdmin = new User({
                 phoneNumber: adminPhoneNumber,
-                password: adminPassword, // O hook pre-save irá hashear
+                password: adminPassword, 
                 isAdmin: true,
             });
             await defaultAdmin.save();
@@ -345,11 +327,7 @@ async function createDefaultAdmin() {
         console.error('Erro ao criar administrador padrão:', error);
     }
 }
-
-// ... (resto do código: middlewares de autenticação, rotas, etc.) ...
 // server.js (continuação)
-
-// ... (código anterior: models, createDefaultAdmin, etc.) ...
 
 // ============================
 // MIDDLEWARES DE AUTENTICAÇÃO
@@ -392,11 +370,7 @@ const isAdmin = (req, res, next) => {
 };
 
 console.log("Middlewares de autenticação definidos.");
-
-// ... (resto do código: rotas, inicialização do servidor, etc.) ...
 // server.js (continuação)
-
-// ... (código anterior: middlewares de autenticação, etc.) ...
 
 // ============================
 // ROTAS DA API
@@ -413,12 +387,10 @@ authRouter.post('/register', async (req, res) => {
         return res.status(400).json({ message: 'Número de telefone e senha são obrigatórios.' });
     }
 
-    // Validação do número de telefone
     if (!validator.isMobilePhone(phoneNumber.toString(), 'any', { strictMode: false })) {
         return res.status(400).json({ message: 'Formato de número de telefone inválido.' });
     }
 
-    // Validação da senha
     if (password.length < 6) {
         return res.status(400).json({ message: 'A senha deve ter pelo menos 6 caracteres.' });
     }
@@ -431,16 +403,15 @@ authRouter.post('/register', async (req, res) => {
 
         const newUser = new User({
             phoneNumber,
-            password, // A senha será hasheada pelo hook pre-save do schema User
+            password, 
         });
 
         await newUser.save();
 
-        // Gerar token JWT para o novo usuário após o cadastro bem-sucedido
         const token = jwt.sign(
             { userId: newUser._id, isAdmin: newUser.isAdmin },
             JWT_SECRET,
-            { expiresIn: '7d' } // Token expira em 7 dias
+            { expiresIn: '7d' } 
         );
 
         res.status(201).json({
@@ -455,7 +426,6 @@ authRouter.post('/register', async (req, res) => {
 
     } catch (error) {
         if (error.name === 'ValidationError') {
-            // Captura erros de validação do Mongoose
             const messages = Object.values(error.errors).map(val => val.message);
             return res.status(400).json({ message: messages.join(', ') });
         }
@@ -483,11 +453,10 @@ authRouter.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Credenciais inválidas. Verifique a senha.' });
         }
 
-        // Gerar token JWT
         const token = jwt.sign(
             { userId: user._id, isAdmin: user.isAdmin },
             JWT_SECRET,
-            { expiresIn: '7d' } // Token expira em 7 dias, pode ser ajustado
+            { expiresIn: '7d' } 
         );
 
         res.status(200).json({
@@ -510,18 +479,14 @@ authRouter.post('/login', async (req, res) => {
 app.use('/api/auth', authRouter);
 
 console.log("Rotas de autenticação (cadastro e login) definidas.");
-
-// ... (resto do código: outras rotas, inicialização do servidor, etc.) ...
 // server.js (continuação)
 
-// ... (código anterior: rotas de autenticação, etc.) ...
-
-// -------- ROTAS DE PRODUTOS (Protegidas - Admin) --------
+// -------- ROTAS DE PRODUTOS (Operações de escrita protegidas por Admin, Leitura pública) --------
 const productRouter = express.Router();
 
 // POST /api/products - Criar um novo produto (Admin)
 productRouter.post('/', authenticateToken, isAdmin, async (req, res) => {
-    const { name, description, image, price, category, estimatedDeliveryTime } = req.body;
+    const { name, description, image, price, category, estimatedDeliveryTime, isActive } = req.body; // Adicionado isActive
 
     if (!name || !description || !image || price === undefined || !category) {
         return res.status(400).json({ message: 'Todos os campos obrigatórios (nome, descrição, imagem, preço, categoria) devem ser fornecidos.' });
@@ -542,7 +507,8 @@ productRouter.post('/', authenticateToken, isAdmin, async (req, res) => {
             image,
             price,
             category,
-            estimatedDeliveryTime: estimatedDeliveryTime || "Máximo 10 minutos", // Valor padrão se não fornecido
+            estimatedDeliveryTime: estimatedDeliveryTime || "Máximo 10 minutos",
+            isActive: isActive === undefined ? true : isActive // Default to true if not provided
         });
 
         const savedProduct = await newProduct.save();
@@ -557,24 +523,18 @@ productRouter.post('/', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
-// GET /api/products - Listar todos os produtos (Público, mas o admin pode ver todos, inclusive inativos)
-// GET /api/products?activeOnly=true - Listar apenas produtos ativos (para usuários)
+// GET /api/products - Listar todos os produtos
 productRouter.get('/', async (req, res) => {
     try {
         const { activeOnly } = req.query;
         let query = {};
 
-        // Se o parâmetro activeOnly=true for passado, filtra apenas produtos ativos
-        // Caso contrário, ou se quem requisita é admin (verificação pode ser adicionada aqui se necessário),
-        // retorna todos. Para simplificar, vamos focar no filtro por enquanto.
         if (activeOnly === 'true') {
             query.isActive = true;
         }
-        // Se for um admin acessando, poderia ter uma lógica para não aplicar o filtro `isActive`
-        // ou permitir um parâmetro tipo `showAll=true` que só admins poderiam usar.
-        // Para o CRUD de admin, o admin geralmente vê tudo. Para a loja, o usuário vê apenas ativos.
-
-        const products = await Product.find(query).sort({ createdAt: -1 }); // Ordena pelos mais recentes
+        // Se não houver activeOnly=true, lista todos (adequado para admin ou listagem geral)
+        
+        const products = await Product.find(query).sort({ createdAt: -1 }); 
         res.status(200).json(products);
     } catch (error) {
         console.error("Erro ao listar produtos:", error);
@@ -582,17 +542,15 @@ productRouter.get('/', async (req, res) => {
     }
 });
 
-// GET /api/products/:id - Obter um produto específico (Público)
+// GET /api/products/:id - Obter um produto específico
 productRouter.get('/:id', async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: 'Produto não encontrado.' });
         }
-        // Adicionar verificação se o produto está inativo e quem está requisitando não é admin.
-        // if (!product.isActive && (!req.user || !req.user.isAdmin)) {
-        //     return res.status(404).json({ message: 'Produto não encontrado ou indisponível.' });
-        // }
+        // No frontend, se o usuário não for admin e product.isActive for false, o frontend pode decidir não mostrar ou mostrar como indisponível.
+        // O backend aqui retorna o produto independentemente do status de ativo para este endpoint.
         res.status(200).json(product);
     } catch (error) {
         if (error.kind === 'ObjectId') {
@@ -607,7 +565,6 @@ productRouter.get('/:id', async (req, res) => {
 productRouter.put('/:id', authenticateToken, isAdmin, async (req, res) => {
     const { name, description, image, price, category, estimatedDeliveryTime, isActive } = req.body;
 
-    // Validação básica
     if (price !== undefined && (typeof price !== 'number' || price < 0)) {
         return res.status(400).json({ message: 'O preço deve ser um número não negativo.' });
     }
@@ -621,21 +578,20 @@ productRouter.put('/:id', authenticateToken, isAdmin, async (req, res) => {
             return res.status(404).json({ message: 'Produto não encontrado para atualização.' });
         }
 
-        // Verifica se o novo nome já existe em outro produto
         if (name && name !== product.name) {
-            const existingProduct = await Product.findOne({ name });
+            const existingProduct = await Product.findOne({ name, _id: { $ne: product._id } }); // Check other products
             if (existingProduct) {
-                return res.status(409).json({ message: `Já existe um produto com o nome '${name}'.` });
+                return res.status(409).json({ message: `Já existe outro produto com o nome '${name}'.` });
             }
         }
 
         // Atualiza os campos fornecidos
-        if (name) product.name = name;
-        if (description) product.description = description;
-        if (image) product.image = image;
+        if (name !== undefined) product.name = name;
+        if (description !== undefined) product.description = description;
+        if (image !== undefined) product.image = image;
         if (price !== undefined) product.price = price;
-        if (category) product.category = category;
-        if (estimatedDeliveryTime) product.estimatedDeliveryTime = estimatedDeliveryTime;
+        if (category !== undefined) product.category = category;
+        if (estimatedDeliveryTime !== undefined) product.estimatedDeliveryTime = estimatedDeliveryTime;
         if (isActive !== undefined) product.isActive = isActive;
 
         const updatedProduct = await product.save();
@@ -674,24 +630,18 @@ productRouter.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
 app.use('/api/products', productRouter);
 
 console.log("Rotas CRUD para Produtos definidas.");
-
-// ... (resto do código: outras rotas, inicialização do servidor, etc.) ...
 // server.js (continuação)
-
-// ... (código anterior: rotas de produtos, etc.) ...
 
 // -------- ROTAS DO PERFIL DO USUÁRIO (Protegidas - Usuário Logado) --------
 const userRouter = express.Router();
 
 // GET /api/user/profile - Obter dados do perfil do usuário logado
 userRouter.get('/profile', authenticateToken, async (req, res) => {
-    // req.user é populado pelo middleware authenticateToken
-    // Retornamos os dados do usuário sem a senha (já foi selecionada para não vir)
     res.status(200).json({
         id: req.user._id,
         phoneNumber: req.user.phoneNumber,
         registrationDate: req.user.registrationDate,
-        isAdmin: req.user.isAdmin // Incluído para consistência, mas o front pode já saber
+        isAdmin: req.user.isAdmin 
     });
 });
 
@@ -699,42 +649,43 @@ userRouter.get('/profile', authenticateToken, async (req, res) => {
 userRouter.put('/profile', authenticateToken, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
-    // Por enquanto, vamos permitir apenas a atualização da senha.
-    // Outros campos como 'phoneNumber' geralmente exigem verificação adicional (ex: SMS OTP).
-
     if (!newPassword || newPassword.length < 6) {
         return res.status(400).json({ message: 'A nova senha deve ter pelo menos 6 caracteres.' });
     }
 
     try {
-        const user = await User.findById(req.user._id); // Busca o usuário completo para ter acesso à senha hasheada
+        const user = await User.findById(req.user._id); 
         if (!user) {
-            // Isso não deveria acontecer se authenticateToken funcionou, mas é uma boa verificação
             return res.status(404).json({ message: 'Usuário não encontrado.' });
         }
 
-        // Se currentPassword for fornecida, verificar a senha atual antes de mudar
         if (currentPassword) {
             const isMatch = await user.comparePassword(currentPassword);
             if (!isMatch) {
                 return res.status(401).json({ message: 'Senha atual incorreta.' });
             }
         } else {
-            // Se não for admin e não fornecer senha atual, não permitir alteração
-            // (Admin poderia alterar senhas sem saber a atual, mas isso não está implementado aqui)
-            if (!req.user.isAdmin) {
+            // Se não for admin e não fornecer senha atual, não permitir alteração.
+            // Admin PODE alterar senha sem a atual (mas essa lógica específica não está aqui, admin usaria rotas /api/admin/users/:id/password por exemplo)
+            // Para um usuário comum alterando sua própria senha, a senha atual é geralmente exigida.
+            // A lógica do seu frontend já trata isso, mas uma verificação no backend é boa.
+            if (!req.user.isAdmin) { // Apenas um usuário normal precisa fornecer a senha atual
                  return res.status(400).json({ message: 'Senha atual é obrigatória para alterar a senha.' });
             }
+            // Se for admin e currentPassword não for fornecida, permite prosseguir (assume que admin tem autoridade)
         }
 
-
-        user.password = newPassword; // O hook pre-save irá hashear a nova senha
+        user.password = newPassword; 
         await user.save();
 
         res.status(200).json({ message: 'Senha atualizada com sucesso.' });
 
     } catch (error) {
         console.error("Erro ao atualizar perfil do usuário:", error);
+        if (error.name === 'ValidationError') { // Caso haja validações futuras no modelo User
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
         res.status(500).json({ message: 'Erro interno do servidor ao atualizar perfil.' });
     }
 });
@@ -744,8 +695,8 @@ userRouter.put('/profile', authenticateToken, async (req, res) => {
 userRouter.get('/subscriptions', authenticateToken, async (req, res) => {
     try {
         const orders = await Order.find({ user: req.user._id })
-            .populate('product', 'name image category') // Popula com alguns dados do produto
-            .sort({ orderDate: -1 }); // Ordena pelas mais recentes
+            .populate('product', 'name image category') 
+            .sort({ orderDate: -1 }); 
 
         res.status(200).json(orders);
     } catch (error) {
@@ -755,7 +706,6 @@ userRouter.get('/subscriptions', authenticateToken, async (req, res) => {
 });
 
 // GET /api/user/subscription/:orderId/credentials - Obter credenciais de uma assinatura específica
-// Esta rota é crucial para o usuário ver os dados da conta (e-mail/senha da assinatura)
 userRouter.get('/subscription/:orderId/credentials', authenticateToken, async (req, res) => {
     const { orderId } = req.params;
 
@@ -770,35 +720,38 @@ userRouter.get('/subscription/:orderId/credentials', authenticateToken, async (r
             return res.status(404).json({ message: 'Pedido não encontrado ou não pertence a este usuário.' });
         }
 
-        // Verifica se os detalhes da assinatura já foram entregues pelo admin
         if (order.subscriptionDetails && order.subscriptionDetails.status === 'delivered') {
             res.status(200).json({
                 orderId: order._id,
-                productName: order.productName, // Pode ser pego do populate se preferir
+                productName: order.productName, 
                 email: order.subscriptionDetails.email,
-                password: order.subscriptionDetails.password, // Considere implicações de segurança de enviar a senha diretamente.
-                                                             // Uma alternativa seria exibir apenas uma vez ou usar um "mostrar senha".
-                                                             // Para o requisito de "ficar visível mesmo após recarregar", armazenar no estado do front é uma opção.
+                password: order.subscriptionDetails.password, 
             });
         } else if (order.paymentStatus === 'paid' && order.subscriptionDetails.status === 'pending_admin_input') {
-            res.status(202).json({ // 202 Accepted (indica que a solicitação foi aceita, mas o processamento não foi concluído)
+            res.status(202).json({ 
                 orderId: order._id,
                 productName: order.productName,
                 message: "Seus dados da assinatura aparecerão aqui em no máximo 10 minutos. Aguarde.",
                 status: order.subscriptionDetails.status
             });
         } else if (order.paymentStatus !== 'paid') {
-            res.status(402).json({ // 402 Payment Required (embora já pago, pode indicar que algo está pendente)
+            res.status(402).json({ 
                 orderId: order._id,
                 productName: order.productName,
                 message: "O pagamento deste pedido ainda não foi confirmado ou falhou.",
                 status: order.paymentStatus
             });
+        } else if (order.subscriptionDetails.status === 'error_delivering') {
+             res.status(500).json({ 
+                message: "Ocorreu um erro ao processar os detalhes da sua assinatura. Contacte o suporte.",
+                status: order.subscriptionDetails.status
+            });
         }
-         else {
-            res.status(204).json({ // 204 No Content ou um status específico
-                 message: "Detalhes da assinatura ainda não disponíveis ou houve um erro.",
-                 status: order.subscriptionDetails.status
+         else { 
+            // Caso genérico para outros status de subscriptionDetails ou paymentStatus não cobertos acima
+            res.status(204).json({ 
+                 message: "Detalhes da assinatura ainda não disponíveis ou estado desconhecido.",
+                 status: order.subscriptionDetails ? order.subscriptionDetails.status : order.paymentStatus
             });
         }
     } catch (error) {
@@ -812,11 +765,7 @@ userRouter.get('/subscription/:orderId/credentials', authenticateToken, async (r
 app.use('/api/user', userRouter);
 
 console.log("Rotas do perfil do usuário definidas.");
-
-// ... (resto do código: outras rotas, inicialização do servidor, etc.) ...
 // server.js (continuação)
-
-// ... (código anterior: rotas do perfil do usuário, etc.) ...
 
 // ========================================
 // ROTAS DO PAINEL ADMINISTRATIVO
@@ -838,6 +787,10 @@ adminRouter.post('/banners', async (req, res) => {
         await newBanner.save();
         res.status(201).json({ message: 'Banner criado com sucesso!', banner: newBanner });
     } catch (error) {
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
         console.error("Erro ao criar banner:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao criar banner.' });
     }
@@ -856,11 +809,19 @@ adminRouter.get('/banners', async (req, res) => {
 
 // PUT /api/admin/banners/:id - Atualizar banner
 adminRouter.put('/banners/:id', async (req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'ID de banner inválido.' });
+    }
     try {
-        const updatedBanner = await Banner.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        const updatedBanner = await Banner.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
         if (!updatedBanner) return res.status(404).json({ message: 'Banner não encontrado.' });
         res.status(200).json({ message: 'Banner atualizado com sucesso!', banner: updatedBanner });
     } catch (error) {
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
         console.error("Erro ao atualizar banner:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao atualizar banner.' });
     }
@@ -868,10 +829,14 @@ adminRouter.put('/banners/:id', async (req, res) => {
 
 // DELETE /api/admin/banners/:id - Deletar banner
 adminRouter.delete('/banners/:id', async (req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'ID de banner inválido.' });
+    }
     try {
-        const deletedBanner = await Banner.findByIdAndDelete(req.params.id);
+        const deletedBanner = await Banner.findByIdAndDelete(id);
         if (!deletedBanner) return res.status(404).json({ message: 'Banner não encontrado.' });
-        res.status(200).json({ message: 'Banner deletado com sucesso!', bannerId: req.params.id });
+        res.status(200).json({ message: 'Banner deletado com sucesso!', bannerId: id });
     } catch (error) {
         console.error("Erro ao deletar banner:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao deletar banner.' });
@@ -891,6 +856,10 @@ adminRouter.post('/countdowns', async (req, res) => {
         await newCountdown.save();
         res.status(201).json({ message: 'Countdown criado com sucesso!', countdown: newCountdown });
     } catch (error) {
+         if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
         console.error("Erro ao criar countdown:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao criar countdown.' });
     }
@@ -909,11 +878,19 @@ adminRouter.get('/countdowns', async (req, res) => {
 
 // PUT /api/admin/countdowns/:id - Atualizar countdown
 adminRouter.put('/countdowns/:id', async (req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'ID de countdown inválido.' });
+    }
     try {
-        const updatedCountdown = await Countdown.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        const updatedCountdown = await Countdown.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
         if (!updatedCountdown) return res.status(404).json({ message: 'Countdown não encontrado.' });
         res.status(200).json({ message: 'Countdown atualizado com sucesso!', countdown: updatedCountdown });
     } catch (error) {
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
         console.error("Erro ao atualizar countdown:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao atualizar countdown.' });
     }
@@ -921,29 +898,46 @@ adminRouter.put('/countdowns/:id', async (req, res) => {
 
 // DELETE /api/admin/countdowns/:id - Deletar countdown
 adminRouter.delete('/countdowns/:id', async (req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'ID de countdown inválido.' });
+    }
     try {
-        const deletedCountdown = await Countdown.findByIdAndDelete(req.params.id);
+        const deletedCountdown = await Countdown.findByIdAndDelete(id);
         if (!deletedCountdown) return res.status(404).json({ message: 'Countdown não encontrado.' });
-        res.status(200).json({ message: 'Countdown deletado com sucesso!', countdownId: req.params.id });
+        res.status(200).json({ message: 'Countdown deletado com sucesso!', countdownId: id });
     } catch (error) {
         console.error("Erro ao deletar countdown:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao deletar countdown.' });
     }
 });
-
+// server.js (continuação)
 
 // -------- GERENCIAMENTO DE PROMOÇÕES (Admin) --------
 // POST /api/admin/promotions - Criar promoção
 adminRouter.post('/promotions', async (req, res) => {
-    const { title, description, bannerOrVideoUrl, isVideo, linkUrl, isActive, startDate, endDate } = req.body;
+    const { title, description, bannerOrVideoUrl, isVideo, linkUrl, isActive, startDate, endDate } = req.body; // Corrigido 'isVide' para 'isVideo'
     if (!title || !description || !bannerOrVideoUrl) {
         return res.status(400).json({ message: 'Título, descrição e URL do banner/vídeo são obrigatórios.' });
     }
     try {
-        const newPromotion = new Promotion({ title, description, bannerOrVideoUrl, isVideo, linkUrl, isActive, startDate, endDate });
+        const newPromotion = new Promotion({ 
+            title, 
+            description, 
+            bannerOrVideoUrl, 
+            isVide: isVideo, // Mantendo 'isVide' aqui para corresponder ao schema, mas o ideal seria corrigir no schema também
+            linkUrl, 
+            isActive, 
+            startDate, 
+            endDate 
+        });
         await newPromotion.save();
         res.status(201).json({ message: 'Promoção criada com sucesso!', promotion: newPromotion });
     } catch (error) {
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
         console.error("Erro ao criar promoção:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao criar promoção.' });
     }
@@ -962,11 +956,26 @@ adminRouter.get('/promotions', async (req, res) => {
 
 // PUT /api/admin/promotions/:id - Atualizar promoção
 adminRouter.put('/promotions/:id', async (req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'ID de promoção inválido.' });
+    }
     try {
-        const updatedPromotion = await Promotion.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        // Se 'isVide' no corpo da requisição for 'isVideo', precisa ser mapeado para 'isVide' do schema.
+        const updateData = { ...req.body };
+        if (req.body.isVideo !== undefined) {
+            updateData.isVide = req.body.isVideo; // Mapeia isVideo para isVide
+            delete updateData.isVideo; // Remove isVideo para não tentar salvar um campo inexistente no schema
+        }
+
+        const updatedPromotion = await Promotion.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
         if (!updatedPromotion) return res.status(404).json({ message: 'Promoção não encontrada.' });
         res.status(200).json({ message: 'Promoção atualizada com sucesso!', promotion: updatedPromotion });
     } catch (error) {
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
         console.error("Erro ao atualizar promoção:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao atualizar promoção.' });
     }
@@ -974,22 +983,26 @@ adminRouter.put('/promotions/:id', async (req, res) => {
 
 // DELETE /api/admin/promotions/:id - Deletar promoção
 adminRouter.delete('/promotions/:id', async (req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'ID de promoção inválido.' });
+    }
     try {
-        const deletedPromotion = await Promotion.findByIdAndDelete(req.params.id);
+        const deletedPromotion = await Promotion.findByIdAndDelete(id);
         if (!deletedPromotion) return res.status(404).json({ message: 'Promoção não encontrada.' });
-        res.status(200).json({ message: 'Promoção deletada com sucesso!', promotionId: req.params.id });
+        res.status(200).json({ message: 'Promoção deletada com sucesso!', promotionId: id });
     } catch (error) {
         console.error("Erro ao deletar promoção:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao deletar promoção.' });
     }
 });
-
+// server.js (continuação)
 
 // -------- GERENCIAMENTO DE USUÁRIOS (Admin) --------
 // GET /api/admin/users - Listar todos os usuários
 adminRouter.get('/users', async (req, res) => {
     try {
-        const users = await User.find().select('-password').sort({ registrationDate: -1 }); // Exclui a senha
+        const users = await User.find().select('-password').sort({ registrationDate: -1 }); 
         res.status(200).json(users);
     } catch (error) {
         console.error("Erro ao listar usuários:", error);
@@ -999,44 +1012,93 @@ adminRouter.get('/users', async (req, res) => {
 
 // GET /api/admin/users/:userId - Ver detalhes de um usuário específico
 adminRouter.get('/users/:userId', async (req, res) => {
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'ID de usuário inválido.' });
+    }
     try {
-        const user = await User.findById(req.params.userId).select('-password');
+        const user = await User.findById(userId).select('-password');
         if (!user) {
             return res.status(404).json({ message: 'Usuário não encontrado.' });
         }
-        // Buscar também o histórico de compras deste usuário
-        const orders = await Order.find({ user: req.params.userId })
+        
+        const orders = await Order.find({ user: userId })
                                   .populate('product', 'name price')
                                   .sort({ orderDate: -1 });
         res.status(200).json({ user, orders });
     } catch (error) {
         console.error("Erro ao buscar detalhes do usuário:", error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
+        res.status(500).json({ message: 'Erro interno do servidor ao buscar detalhes do usuário.' });
     }
 });
 
-// PUT /api/admin/users/:userId - Atualizar um usuário (ex: tornar admin, desativar - não implementado)
-// ... (Pode ser expandido conforme necessidade)
+// PUT /api/admin/users/:userId - Atualizar um usuário (ex: tornar admin, desativar)
+// Esta é uma rota mais complexa e depende dos campos que você quer permitir que o admin altere.
+// Exemplo: Alterar o status de isAdmin
+adminRouter.put('/users/:userId/status', async (req, res) => {
+    const { userId } = req.params;
+    const { isAdmin, /* outros campos como 'isBlocked' ou 'isActiveUser' poderiam ser adicionados aqui */ } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'ID de usuário inválido.' });
+    }
+    if (typeof isAdmin !== 'boolean' && isAdmin !== undefined) { // Permitir undefined se não for alterar este campo
+        return res.status(400).json({ message: 'O status de administrador (isAdmin) deve ser um booleano.' });
+    }
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuário não encontrado.' });
+        }
+
+        // Prevenir que o último admin se despromova ou que um admin se despromova por esta rota simples.
+        // Uma lógica mais robusta seria necessária para gerenciar múltiplos admins.
+        if (req.user._id.equals(user._id) && user.isAdmin && isAdmin === false) {
+             const adminCount = await User.countDocuments({ isAdmin: true });
+             if (adminCount <= 1) {
+                return res.status(400).json({ message: 'Não é possível remover o status de administrador do único administrador existente.' });
+             }
+        }
+        
+        if (isAdmin !== undefined) {
+            user.isAdmin = isAdmin;
+        }
+        // Adicionar outras atualizações de status aqui se necessário
+
+        await user.save();
+        // Retornar o usuário atualizado (sem a senha)
+        const updatedUser = await User.findById(userId).select('-password');
+        res.status(200).json({ message: 'Status do usuário atualizado com sucesso.', user: updatedUser });
+
+    } catch (error) {
+        console.error("Erro ao atualizar status do usuário:", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao atualizar status do usuário.' });
+    }
+});
+
+// Poderia haver uma rota para o admin resetar/alterar a senha de um usuário:
+// PUT /api/admin/users/:userId/password
+// adminRouter.put('/users/:userId/password', async (req, res) => { ... });
+// server.js (continuação)
 
 // -------- GERENCIAMENTO DE PEDIDOS E CREDENCIAIS (Admin) --------
 // GET /api/admin/orders - Listar todos os pedidos
 adminRouter.get('/orders', async (req, res) => {
     try {
-        // Paginação simples
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20; // 20 pedidos por página
+        const limit = parseInt(req.query.limit) || 20; 
         const skip = (page - 1) * limit;
 
         let filter = {};
-        // Filtrar por status do pagamento ou status da credencial, se fornecido
         if (req.query.paymentStatus) filter.paymentStatus = req.query.paymentStatus;
         if (req.query.credentialStatus) filter['subscriptionDetails.status'] = req.query.credentialStatus;
-
+        // Poderia adicionar filtro por ID de usuário ou produto aqui, se necessário.
+        // Ex: if (req.query.userId) filter.user = req.query.userId;
 
         const orders = await Order.find(filter)
-            .populate('user', 'phoneNumber') // Adiciona número do usuário
-            .populate('product', 'name') // Adiciona nome do produto
+            .populate('user', 'phoneNumber') 
+            .populate('product', 'name') 
             .sort({ orderDate: -1 })
             .skip(skip)
             .limit(limit);
@@ -1057,17 +1119,21 @@ adminRouter.get('/orders', async (req, res) => {
 
 // GET /api/admin/orders/:orderId - Ver detalhes de um pedido específico
 adminRouter.get('/orders/:orderId', async (req, res) => {
+    const { orderId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+        return res.status(400).json({ message: 'ID de pedido inválido.' });
+    }
     try {
-        const order = await Order.findById(req.params.orderId)
-                                  .populate('user', 'phoneNumber registrationDate')
-                                  .populate('product', 'name description image category');
+        const order = await Order.findById(orderId)
+                                  .populate('user', 'phoneNumber registrationDate isAdmin') // Adicionado isAdmin
+                                  .populate('product'); // Popula o produto inteiro
         if (!order) {
             return res.status(404).json({ message: 'Pedido não encontrado.' });
         }
         res.status(200).json(order);
     } catch (error) {
         console.error("Erro ao buscar detalhes do pedido:", error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
+        res.status(500).json({ message: 'Erro interno do servidor ao buscar detalhes do pedido.' });
     }
 });
 
@@ -1090,62 +1156,87 @@ adminRouter.put('/orders/:orderId/credentials', async (req, res) => {
             return res.status(404).json({ message: 'Pedido não encontrado.' });
         }
 
-        // Só permite inserir credenciais se o pagamento estiver confirmado
         if (order.paymentStatus !== 'paid') {
-            return res.status(400).json({ message: 'Não é possível adicionar credenciais a um pedido não pago ou pendente.' });
+            return res.status(400).json({ message: 'Não é possível adicionar credenciais a um pedido com pagamento pendente ou falhado.' });
         }
 
         order.subscriptionDetails.email = email;
-        order.subscriptionDetails.password = password; // A senha da assinatura é armazenada como fornecida
+        order.subscriptionDetails.password = password; 
         order.subscriptionDetails.status = 'delivered';
 
         await order.save();
-        // Aqui você pode adicionar lógica para notificar o usuário (ex: WebSocket, e-mail - fora do escopo atual)
+        
+        // TODO: Considerar notificar o usuário sobre a entrega das credenciais (e.g., via SMS, e-mail ou WebSocket)
+        // Esta funcionalidade está fora do escopo atual do backend.
 
-        res.status(200).json({ message: 'Dados da assinatura atualizados com sucesso!', order });
+        // Retorna o pedido atualizado
+        const updatedOrder = await Order.findById(orderId)
+                                        .populate('user', 'phoneNumber')
+                                        .populate('product', 'name');
+
+        res.status(200).json({ message: 'Dados da assinatura atualizados com sucesso!', order: updatedOrder });
     } catch (error) {
         console.error("Erro ao atualizar credenciais do pedido:", error);
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
         res.status(500).json({ message: 'Erro interno do servidor ao atualizar credenciais.' });
     }
 });
+// server.js (continuação)
 
+// -------- GERENCIAMENTO DE TEMA (Admin - Placeholder) --------
+// Em uma aplicação real, isso seria salvo em um modelo 'SiteSettings' ou similar no banco.
+// Por enquanto, é apenas uma variável na memória do servidor.
+let currentThemeSettings = { 
+    primaryColor: '#E50914', // Cor padrão Netflix Vermelho
+    accentColor: '#FFFFFF',   // Cor padrão Branca
+    season: 'default',        // Ex: 'default', 'natal', 'pascoa'
+    // Outras configurações globais do site poderiam ir aqui
+};
 
-// Rota para alterar tema (placeholder, apenas salva a configuração)
-// No frontend, você buscaria essa configuração para aplicar o tema.
-// Poderia ser armazenado em um model 'SiteSettings' ou similar.
-let currentTheme = { primaryColor: '#007bff', accentColor: '#6c757d', season: 'default' }; // Tema padrão
-
+// POST /api/admin/theme - Atualizar configurações do tema
 adminRouter.post('/theme', (req, res) => {
     const { primaryColor, accentColor, season } = req.body;
-    if (primaryColor) currentTheme.primaryColor = primaryColor;
-    if (accentColor) currentTheme.accentColor = accentColor;
-    if (season) currentTheme.season = season;
-    // Idealmente, isso seria salvo no banco de dados em uma coleção de configurações.
-    console.log("Tema atualizado para:", currentTheme);
-    res.status(200).json({ message: 'Tema atualizado (simulado).', theme: currentTheme });
+    
+    // Validações simples (poderiam ser mais robustas)
+    if (primaryColor && !validator.isHexColor(primaryColor)) {
+        return res.status(400).json({ message: 'Cor primária inválida (deve ser hexadecimal).' });
+    }
+    if (accentColor && !validator.isHexColor(accentColor)) {
+        return res.status(400).json({ message: 'Cor de destaque inválida (deve ser hexadecimal).' });
+    }
+
+    if (primaryColor) currentThemeSettings.primaryColor = primaryColor;
+    if (accentColor) currentThemeSettings.accentColor = accentColor;
+    if (season) currentThemeSettings.season = season; // Poderia validar os valores de 'season'
+    
+    console.log("Configurações de tema atualizadas para:", currentThemeSettings);
+    // Em um app real: await SiteSettings.findOneAndUpdate({}, currentThemeSettings, { upsert: true, new: true });
+    res.status(200).json({ message: 'Configurações de tema atualizadas com sucesso (simulado).', theme: currentThemeSettings });
 });
 
-// Rota para buscar o tema atual (para o front-end usar)
-// Esta rota não precisa de autenticação de admin, pois o front do usuário precisará dela.
-// Vamos criar uma rota pública para isso fora do adminRouter.
+// GET /api/admin/theme - Obter configurações atuais do tema (para o painel admin)
+adminRouter.get('/theme', (req, res) => {
+    // Em um app real: const settings = await SiteSettings.findOne({});
+    // res.status(200).json(settings || currentThemeSettings); // Retorna do DB ou o padrão
+    res.status(200).json(currentThemeSettings);
+});
 
 
 // Usar o roteador de admin com o prefixo /api/admin
 app.use('/api/admin', adminRouter);
 
-// Rota pública para buscar o tema atual
+// Rota PÚBLICA para buscar as configurações de tema atuais (para o frontend do cliente)
 app.get('/api/theme', (req, res) => {
-    // Em uma implementação real, você buscaria do DB.
-    res.status(200).json(currentTheme);
+    // Em um app real, buscaria do DB de forma similar à rota admin, mas sem autenticação.
+    res.status(200).json(currentThemeSettings);
 });
 
 
 console.log("Rotas do painel administrativo definidas.");
-
-// ... (resto do código: rotas de pagamento, inicialização do servidor, etc.) ...
 // server.js (continuação)
-
-// ... (código anterior: rotas do admin, etc.) ...
 
 // ============================
 // ROTAS DE PAGAMENTO
@@ -1158,7 +1249,7 @@ paymentRouter.use(authenticateToken);
 // POST /api/payment/initiate - Iniciar um pagamento
 paymentRouter.post('/initiate', async (req, res) => {
     const { productId, paymentMethod, buyerPhoneNumber, buyerName } = req.body;
-    const userId = req.user._id; // ID do usuário logado
+    const userId = req.user._id; 
 
     if (!productId || !paymentMethod || !buyerPhoneNumber || !buyerName) {
         return res.status(400).json({ message: 'ID do produto, método de pagamento, número de telefone do pagador e nome do pagador são obrigatórios.' });
@@ -1168,7 +1259,6 @@ paymentRouter.post('/initiate', async (req, res) => {
         return res.status(400).json({ message: 'Método de pagamento inválido. Aceitos: mpesa, emola.' });
     }
 
-    // Validação do número de telefone do pagador
     if (!validator.isMobilePhone(buyerPhoneNumber.toString(), 'any', { strictMode: false })) {
         return res.status(400).json({ message: 'Formato de número de telefone do pagador inválido.' });
     }
@@ -1181,20 +1271,19 @@ paymentRouter.post('/initiate', async (req, res) => {
 
         const amount = product.price;
 
-        // 1. Criar um pedido inicial no banco com status 'pending'
         const newOrder = new Order({
             user: userId,
             product: productId,
-            productName: product.name, // Armazenar para referência rápida
-            productImage: product.image, // Armazenar para referência rápida
+            productName: product.name, 
+            productImage: product.image, 
             totalAmount: amount,
             paymentMethod: paymentMethod.toLowerCase(),
-            paymentStatus: 'pending', // Status inicial
+            paymentStatus: 'pending', 
             buyerInfo: {
                 phoneNumber: buyerPhoneNumber,
                 name: buyerName,
             },
-            subscriptionDetails: { // Inicializa com status pending_admin_input
+            subscriptionDetails: { 
                 email: null,
                 password: null,
                 status: 'pending_admin_input'
@@ -1202,60 +1291,65 @@ paymentRouter.post('/initiate', async (req, res) => {
         });
         await newOrder.save();
 
-        // 2. Preparar a chamada para a API de pagamento
         const paymentApiUrl = paymentMethod.toLowerCase() === 'mpesa' ? MPESA_API_URL : EMOLA_API_URL;
+        if (!paymentApiUrl) {
+            console.error(`URL da API para ${paymentMethod} não está definida nas variáveis de ambiente.`);
+            // Salvar pedido com falha, pois não podemos prosseguir
+            newOrder.paymentStatus = 'failed';
+            newOrder.transactionId = `Configuração de API de ${paymentMethod} ausente.`;
+            await newOrder.save();
+            return res.status(500).json({
+                success: false,
+                message: `Erro de configuração do servidor para ${paymentMethod}. Por favor, contacte o suporte.`
+            });
+        }
+        
         const paymentPayload = {
             carteira: PAYMENT_WALLET_ID,
             numero: buyerPhoneNumber,
-            "quem comprou": buyerName, // As chaves devem ser exatamente como na especificação
-            valor: amount.toString(), // API espera valor como string
+            "quem comprou": buyerName, 
+            valor: amount.toString(), 
         };
-
-        // Simulação de animação de carregamento no front-end (o backend não envia animação)
-        // O front-end deve exibir um loader ao chamar esta API.
-        // O backend agora fará a chamada para a API de pagamento.
 
         console.log(`Iniciando pagamento para pedido ${newOrder._id} via ${paymentMethod} com payload:`, paymentPayload);
 
-        // 3. Chamar a API de pagamento externa
         axios.post(paymentApiUrl, paymentPayload, {
-            headers: {
-                // Adicionar quaisquer headers necessários, como 'Content-Type': 'application/json'
-                // ou tokens de autenticação para a API de pagamento, se houver.
-                // Pelas URLs fornecidas, parece ser um endpoint público ou com autenticação embutida.
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         })
         .then(async paymentApiResponse => {
-            // Processar a resposta da API de pagamento
-            console.log(`Resposta da API de ${paymentMethod} para pedido ${newOrder._id}:`, paymentApiResponse.data);
+            console.log(`Resposta da API de ${paymentMethod} para pedido ${newOrder._id} (status ${paymentApiResponse.status}):`, paymentApiResponse.data);
             let paymentSuccessful = false;
-            let transactionReference = null; // Ou algum ID da resposta
+            let transactionReference = null; 
 
             if (paymentMethod.toLowerCase() === 'mpesa') {
-                // Respostas MPESA: 200 = Sucesso, 201 = Erro, 422 = Saldo insuficiente, 400 = PIN errado
-                if (paymentApiResponse.status === 200) { // Supondo que 200 OK seja sucesso no corpo também
-                     // A API do mpesa da Printf é um pouco diferente, ela retorna 200 e no corpo tem o `status`
-                    if (paymentApiResponse.data && paymentApiResponse.data.status === "Pagamento efectuado com sucesso") {
-                        paymentSuccessful = true;
-                        transactionReference = paymentApiResponse.data.referenciaPagamento || `mpesa_${newOrder._id}`;
+                if (paymentApiResponse.status === 200) { 
+                    if (paymentApiResponse.data && paymentApiResponse.data.status === 'sucesso') {
+                        // Verificação adicional se a estrutura da resposta sempre incluir 'resposta.status' para sucesso
+                        if (paymentApiResponse.data.resposta && paymentApiResponse.data.resposta.status === 200) {
+                            paymentSuccessful = true;
+                            transactionReference = paymentApiResponse.data.referenciaPagamento || paymentApiResponse.data.transaction_id || `mpesa_success_${newOrder._id}`;
+                        } else if (!paymentApiResponse.data.resposta) { 
+                            // Se 'resposta' não existir, mas o status principal for 'sucesso', consideramos sucesso.
+                            // Isso torna a lógica mais flexível para diferentes formatos de resposta de 'sucesso'.
+                            paymentSuccessful = true;
+                            transactionReference = paymentApiResponse.data.referenciaPagamento || paymentApiResponse.data.transaction_id || `mpesa_success_simple_${newOrder._id}`;
+                        } else {
+                            newOrder.paymentStatus = 'failed';
+                            newOrder.transactionId = `Mpesa status 'sucesso' mas resposta interna não OK: ${JSON.stringify(paymentApiResponse.data.resposta || paymentApiResponse.data)}`;
+                        }
                     } else {
-                        // Mesmo com status HTTP 200, o pagamento pode ter falhado internamente
                         newOrder.paymentStatus = 'failed';
-                        // Guardar a mensagem de erro da API se disponível
-                        newOrder.transactionId = paymentApiResponse.data.mensagem || 'Falha no Mpesa';
+                        newOrder.transactionId = paymentApiResponse.data.mensagem || `Falha no Mpesa (status: ${paymentApiResponse.data.status || 'desconhecido'})`;
                     }
                 } else {
                     newOrder.paymentStatus = 'failed';
-                    // Guardar a mensagem de erro da API se disponível
-                    const errorMsg = paymentApiResponse.data ? (paymentApiResponse.data.message || paymentApiResponse.data.error || JSON.stringify(paymentApiResponse.data)) : `Erro ${paymentApiResponse.status}`;
+                    const errorMsg = paymentApiResponse.data ? (paymentApiResponse.data.message || paymentApiResponse.data.error || JSON.stringify(paymentApiResponse.data)) : `Erro HTTP ${paymentApiResponse.status}`;
                     newOrder.transactionId = errorMsg;
                 }
             } else { // eMola
-                // Respostas EMOLA: success = yes (pagamento aprovado), success = no (pagamento reprovado)
                 if (paymentApiResponse.data && paymentApiResponse.data.success === 'yes') {
                     paymentSuccessful = true;
-                    transactionReference = paymentApiResponse.data.transaction_id || `emola_${newOrder._id}`; // Supondo que haja um transaction_id
+                    transactionReference = paymentApiResponse.data.transaction_id || `emola_${newOrder._id}`; 
                 } else {
                     newOrder.paymentStatus = 'failed';
                     newOrder.transactionId = paymentApiResponse.data.message || 'Pagamento eMola reprovado';
@@ -1265,12 +1359,9 @@ paymentRouter.post('/initiate', async (req, res) => {
             if (paymentSuccessful) {
                 newOrder.paymentStatus = 'paid';
                 newOrder.transactionId = transactionReference;
-                // Os dados da assinatura (e-mail/senha) ainda estão pendentes de input do admin
                 newOrder.subscriptionDetails.status = 'pending_admin_input';
                 await newOrder.save();
 
-                // Resposta para o front-end indicando sucesso no pagamento e espera pelas credenciais
-                // O frontend deve mostrar animação de sucesso e a mensagem de espera.
                 return res.status(200).json({
                     success: true,
                     message: 'Pagamento realizado com sucesso! Seus dados da assinatura aparecerão em seu perfil em no máximo 10 minutos. Aguarde.',
@@ -1279,9 +1370,9 @@ paymentRouter.post('/initiate', async (req, res) => {
                     subscriptionStatus: newOrder.subscriptionDetails.status
                 });
             } else {
-                // Pagamento falhou
-                await newOrder.save(); // Salva o status 'failed' e a mensagem de erro no pedido
-                return res.status(402).json({ // 402 Payment Required (ou outro código de erro apropriado)
+                // paymentStatus já foi definido como 'failed' e transactionId preenchido nos blocos acima
+                await newOrder.save(); 
+                return res.status(402).json({ 
                     success: false,
                     message: `Pagamento falhou. Detalhes: ${newOrder.transactionId}`,
                     orderId: newOrder._id,
@@ -1290,23 +1381,19 @@ paymentRouter.post('/initiate', async (req, res) => {
             }
         })
         .catch(async error => {
-            // Erro na chamada para a API de pagamento (ex: rede, API fora do ar)
             console.error(`Erro ao chamar API de ${paymentMethod} para pedido ${newOrder._id}:`, error.response ? error.response.data : error.message);
             newOrder.paymentStatus = 'failed';
-            newOrder.transactionId = `Erro na comunicação com a API de pagamento: ${error.message}`;
+            newOrder.transactionId = `Erro de comunicação com API de pagamento: ${error.message.substring(0, 100)}`; // Limitar tamanho da msg de erro
             await newOrder.save();
 
             return res.status(500).json({
                 success: false,
-                message: 'Ocorreu um erro ao processar seu pagamento. Por favor, tente novamente mais tarde.',
+                message: 'Ocorreu um erro ao processar seu pagamento. Por favor, tente novamente mais tarde ou contacte o suporte.',
                 orderId: newOrder._id,
                 paymentStatus: newOrder.paymentStatus,
-                errorDetails: error.message
+                errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         });
-
-        // O front-end deve exibir o loader aqui. A resposta final virá do .then() ou .catch() da chamada axios.
-        // Não enviar uma resposta aqui, pois a chamada axios é assíncrona.
 
     } catch (error) {
         console.error("Erro ao iniciar pagamento:", error);
@@ -1317,16 +1404,11 @@ paymentRouter.post('/initiate', async (req, res) => {
     }
 });
 
-
 // Usar o roteador de pagamento com o prefixo /api/payment
 app.use('/api/payment', paymentRouter);
 
 console.log("Rotas de pagamento definidas.");
-
-// ... (inicialização do servidor, etc.) ...
 // server.js (continuação)
-
-// ... (código anterior: rotas de pagamento, etc.) ...
 
 // ============================
 // MANIPULADOR DE ROTA NÃO ENCONTRADA (404)
@@ -1337,15 +1419,19 @@ app.use((req, res, next) => {
 });
 
 // ============================
-// MANIPULADOR DE ERROS GLOBAL (Opcional, mas bom para pegar erros não tratados)
+// MANIPULADOR DE ERROS GLOBAL
 // ============================
-// Este middleware de tratamento de erros deve ter 4 argumentos
+// Este middleware de tratamento de erros deve ter 4 argumentos (err, req, res, next)
 app.use((err, req, res, next) => {
-    console.error("ERRO NÃO TRATADO:", err.stack); // Loga o stack trace do erro no console do servidor
-    // Não envie o stack trace para o cliente em produção por razões de segurança
-    res.status(500).json({
-        message: 'Ocorreu um erro inesperado no servidor.',
-        // error: process.env.NODE_ENV === 'development' ? err.message : {} // Apenas em desenvolvimento
+    console.error("ERRO NÃO TRATADO:", err.stack); 
+    
+    // Evitar enviar detalhes do erro em produção
+    const errorMessage = process.env.NODE_ENV === 'development' ? err.message : 'Ocorreu um erro inesperado no servidor.';
+    const errorDetails = process.env.NODE_ENV === 'development' ? err : {};
+
+    res.status(err.status || 500).json({ // Usa o status do erro se disponível, senão 500
+        message: errorMessage,
+        error: errorDetails // Só envia detalhes em desenvolvimento
     });
 });
 
@@ -1365,10 +1451,13 @@ app.listen(PORT, () => {
     console.log(`  POST /api/payment/initiate  (Iniciar pagamento)`);
     console.log(`  GET  /api/user/profile      (Perfil do usuário logado)`);
     console.log(`  GET  /api/user/subscriptions (Histórico de assinaturas do usuário)`);
+    console.log(`  GET  /api/theme             (Obter tema atual)`);
     console.log('--- Admin Endpoints (requerem token de admin) ---');
-    console.log(`  POST /api/admin/products     (Criar produto)`);
+    console.log(`  POST /api/products             (Criar produto - admin)`); // Rota de admin para produtos
+    console.log(`  PUT  /api/products/:id        (Atualizar produto - admin)`);// Rota de admin para produtos
     console.log(`  GET  /api/admin/orders       (Listar todos os pedidos)`);
     console.log(`  PUT  /api/admin/orders/:orderId/credentials (Inserir credenciais)`);
+    console.log(`  POST /api/admin/banners      (Criar banner)`);
     console.log('-----------------------------------------------------');
 });
 
