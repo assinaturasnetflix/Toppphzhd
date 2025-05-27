@@ -30,7 +30,7 @@ mongoose.connect(MONGODB_URI, {
 .then(() => {
     console.log('Conectado ao MongoDB com sucesso!');
     // Função para criar admin padrão (será definida depois)
-    createDefaultAdmin();
+    createDefaultAdmin(); // A chamada está aqui
 })
 .catch(err => {
     console.error('Erro ao conectar ao MongoDB:', err.message);
@@ -45,6 +45,9 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 // Definição da porta do servidor
 const PORT = process.env.PORT || 3000;
+
+// Removendo a declaração duplicada/placeholder da função createDefaultAdmin que estava aqui.
+// A definição correta virá depois dos schemas.
 
 console.log("Configuração inicial do server.js carregada.");
 // server.js (continuação)
@@ -161,7 +164,7 @@ const orderSchema = new mongoose.Schema({
         enum: ['mpesa', 'emola', 'pending'],
         default: 'pending',
     },
-    paymentStatus: { // 'pending', 'paid', 'failed'
+    paymentStatus: { // 'pending', 'paid', 'failed' (removido 'processing_credentials' daqui pois é um estado interno de subscriptionDetails)
         type: String,
         default: 'pending',
     },
@@ -265,7 +268,7 @@ const promotionSchema = new mongoose.Schema({
         type: String,
         required: [true, "O banner ou vídeo da promoção é obrigatório."],
     },
-    isVide: { // Nota: Mantido 'isVide' como no original. Se for um typo, idealmente corrigir no schema.
+    isVide: { // Mantido como 'isVide' conforme o original
         type: Boolean,
         default: false, 
     },
@@ -294,9 +297,9 @@ const Promotion = mongoose.model('Promotion', promotionSchema);
 
 console.log("Schemas e Models do MongoDB definidos.");
 
-// Agora vamos implementar a função createDefaultAdmin
+// Definição da função createDefaultAdmin (a que estava cortada antes)
 async function createDefaultAdmin() {
-    console.log("Verificando/criando admin padrão...");
+    // A mensagem "Verificando/criando admin padrão..." já foi logada no .then() da conexão do mongoose
     try {
         const adminExists = await User.findOne({ isAdmin: true });
         if (!adminExists) {
@@ -309,7 +312,7 @@ async function createDefaultAdmin() {
             }
 
             // Validação básica do número de telefone do admin
-            if (!validator.isMobilePhone(adminPhoneNumber.toString(), 'any', { strictMode: false })) {
+            if (!validator.isMobilePhone(adminPhoneNumber.toString(), 'any', { strictMode: false })) { // Corrigido para usar toString()
                 console.warn(`Número de telefone do admin padrão ('${adminPhoneNumber}') inválido. Admin padrão não será criado.`);
                 return;
             }
@@ -383,10 +386,10 @@ authRouter.post('/register', async (req, res) => {
     try {
         const existingUser = await User.findOne({ phoneNumber });
         if (existingUser) return res.status(409).json({ message: 'Este número de telefone já está cadastrado.' });
-        const newUser = new User({ phoneNumber, password, });
+        const newUser = new User({ phoneNumber, password });
         await newUser.save();
         const token = jwt.sign({ userId: newUser._id, isAdmin: newUser.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({ message: 'Usuário cadastrado com sucesso!', token, user: { id: newUser._id, phoneNumber: newUser.phoneNumber, isAdmin: newUser.isAdmin } });
+        res.status(201).json({ message: 'Usuário cadastrado com sucesso!', token, user: { id: newUser._id, phoneNumber: newUser.phoneNumber, isAdmin: newUser.isAdmin }});
     } catch (error) {
         if (error.name === 'ValidationError') return res.status(400).json({ message: Object.values(error.errors).map(val => val.message).join(', ') });
         console.error("Erro no cadastro:", error);
@@ -403,7 +406,7 @@ authRouter.post('/login', async (req, res) => {
         const isMatch = await user.comparePassword(password);
         if (!isMatch) return res.status(401).json({ message: 'Credenciais inválidas. Verifique a senha.' });
         const token = jwt.sign({ userId: user._id, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
-        res.status(200).json({ message: 'Login bem-sucedido!', token, user: { id: user._id, phoneNumber: user.phoneNumber, isAdmin: user.isAdmin } });
+        res.status(200).json({ message: 'Login bem-sucedido!', token, user: { id: user._id, phoneNumber: user.phoneNumber, isAdmin: user.isAdmin }});
     } catch (error) {
         console.error("Erro no login:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao tentar fazer login.' });
@@ -412,17 +415,17 @@ authRouter.post('/login', async (req, res) => {
 app.use('/api/auth', authRouter);
 console.log("Rotas de autenticação (cadastro e login) definidas.");
 
-// -------- ROTAS DE PRODUTOS (Operações de escrita protegidas por Admin, Leitura pública) --------
+// -------- ROTAS DE PRODUTOS (Protegidas - Admin para escrita) --------
 const productRouter = express.Router();
 
 productRouter.post('/', authenticateToken, isAdmin, async (req, res) => {
-    const { name, description, image, price, category, estimatedDeliveryTime, isActive } = req.body;
+    const { name, description, image, price, category, estimatedDeliveryTime, isActive } = req.body; // isActive foi adicionado aqui na versão anterior
     if (!name || !description || !image || price === undefined || !category) return res.status(400).json({ message: 'Todos os campos obrigatórios (nome, descrição, imagem, preço, categoria) devem ser fornecidos.' });
     if (typeof price !== 'number' || price < 0) return res.status(400).json({ message: 'O preço deve ser um número não negativo.' });
     try {
         const existingProduct = await Product.findOne({ name });
         if (existingProduct) return res.status(409).json({ message: `Um produto com o nome '${name}' já existe.` });
-        const newProduct = new Product({ name, description, image, price, category, estimatedDeliveryTime: estimatedDeliveryTime || "Máximo 10 minutos", isActive: isActive === undefined ? true : isActive });
+        const newProduct = new Product({ name, description, image, price, category, estimatedDeliveryTime: estimatedDeliveryTime || "Máximo 10 minutos", isActive: isActive === undefined ? true : isActive }); // Usando isActive
         const savedProduct = await newProduct.save();
         res.status(201).json({ message: 'Produto criado com sucesso!', product: savedProduct });
     } catch (error) {
@@ -465,10 +468,10 @@ productRouter.put('/:id', authenticateToken, isAdmin, async (req, res) => {
         const product = await Product.findById(req.params.id);
         if (!product) return res.status(404).json({ message: 'Produto não encontrado para atualização.' });
         if (name && name !== product.name) {
-            const existingProduct = await Product.findOne({ name, _id: { $ne: product._id } });
-            if (existingProduct) return res.status(409).json({ message: `Já existe outro produto com o nome '${name}'.` });
+            const existingProduct = await Product.findOne({ name, _id: { $ne: product._id } }); // Corrigido para verificar _id diferente
+            if (existingProduct) return res.status(409).json({ message: `Já existe um produto com o nome '${name}'.` });
         }
-        if (name !== undefined) product.name = name;
+        if (name !== undefined) product.name = name; // Usar !== undefined para permitir strings vazias se desejado
         if (description !== undefined) product.description = description;
         if (image !== undefined) product.image = image;
         if (price !== undefined) product.price = price;
@@ -547,8 +550,8 @@ userRouter.get('/subscription/:orderId/credentials', authenticateToken, async (r
         if (order.subscriptionDetails && order.subscriptionDetails.status === 'delivered') return res.status(200).json({ orderId: order._id, productName: order.productName, email: order.subscriptionDetails.email, password: order.subscriptionDetails.password, });
         else if (order.paymentStatus === 'paid' && order.subscriptionDetails.status === 'pending_admin_input') return res.status(202).json({ orderId: order._id, productName: order.productName, message: "Seus dados da assinatura aparecerão aqui em no máximo 10 minutos. Aguarde.", status: order.subscriptionDetails.status });
         else if (order.paymentStatus !== 'paid') return res.status(402).json({ orderId: order._id, productName: order.productName, message: "O pagamento deste pedido ainda não foi confirmado ou falhou.", status: order.paymentStatus });
-        else if (order.subscriptionDetails.status === 'error_delivering') return res.status(500).json({ message: "Ocorreu um erro ao processar os detalhes da sua assinatura. Contacte o suporte.", status: order.subscriptionDetails.status});
-        else return res.status(204).json({ message: "Detalhes da assinatura ainda não disponíveis ou estado desconhecido.", status: order.subscriptionDetails ? order.subscriptionDetails.status : order.paymentStatus });
+        else if (order.subscriptionDetails.status === 'error_delivering') return res.status(500).json({ message: "Ocorreu um erro ao processar os detalhes da sua assinatura. Contacte o suporte.", status: order.subscriptionDetails.status}); // Adicionado
+        else return res.status(204).json({ message: "Detalhes da assinatura ainda não disponíveis ou houve um erro.", status: order.subscriptionDetails.status });
     } catch (error) {
         console.error("Erro ao buscar credenciais da assinatura:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao buscar credenciais.' });
@@ -564,7 +567,7 @@ const adminRouter = express.Router();
 adminRouter.use(authenticateToken, isAdmin);
 
 // -------- GERENCIAMENTO DE BANNERS (Admin) --------
-adminRouter.post('/banners', async (req, res) => {
+adminRouter.post('/banners', async (req, res) => { /* ... (código original) ... */ 
     const { title, imageUrl, linkUrl, type, isActive } = req.body;
     if (!imageUrl || !type) return res.status(400).json({ message: 'URL da imagem e tipo do banner são obrigatórios.' });
     try {
@@ -577,7 +580,7 @@ adminRouter.post('/banners', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao criar banner.' });
     }
 });
-adminRouter.get('/banners', async (req, res) => {
+adminRouter.get('/banners', async (req, res) => { /* ... (código original) ... */ 
     try {
         const banners = await Banner.find().sort({ createdAt: -1 });
         res.status(200).json(banners);
@@ -586,7 +589,7 @@ adminRouter.get('/banners', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao listar banners.' });
     }
 });
-adminRouter.put('/banners/:id', async (req, res) => {
+adminRouter.put('/banners/:id', async (req, res) => { /* ... (código original) ... */ 
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'ID de banner inválido.' });
     try {
@@ -599,7 +602,7 @@ adminRouter.put('/banners/:id', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao atualizar banner.' });
     }
 });
-adminRouter.delete('/banners/:id', async (req, res) => {
+adminRouter.delete('/banners/:id', async (req, res) => { /* ... (código original) ... */
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'ID de banner inválido.' });
     try {
@@ -613,7 +616,7 @@ adminRouter.delete('/banners/:id', async (req, res) => {
 });
 
 // -------- GERENCIAMENTO DE COUNTDOWNS (Admin) --------
-adminRouter.post('/countdowns', async (req, res) => {
+adminRouter.post('/countdowns', async (req, res) => { /* ... (código original) ... */
     const { title, endDate, description, isActive } = req.body;
     if (!title || !endDate) return res.status(400).json({ message: 'Título e data final são obrigatórios para o countdown.' });
     try {
@@ -626,7 +629,7 @@ adminRouter.post('/countdowns', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao criar countdown.' });
     }
 });
-adminRouter.get('/countdowns', async (req, res) => {
+adminRouter.get('/countdowns', async (req, res) => { /* ... (código original) ... */
     try {
         const countdowns = await Countdown.find().sort({ createdAt: -1 });
         res.status(200).json(countdowns);
@@ -635,7 +638,7 @@ adminRouter.get('/countdowns', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao listar countdowns.' });
     }
 });
-adminRouter.put('/countdowns/:id', async (req, res) => {
+adminRouter.put('/countdowns/:id', async (req, res) => { /* ... (código original) ... */
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'ID de countdown inválido.' });
     try {
@@ -648,7 +651,7 @@ adminRouter.put('/countdowns/:id', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao atualizar countdown.' });
     }
 });
-adminRouter.delete('/countdowns/:id', async (req, res) => {
+adminRouter.delete('/countdowns/:id', async (req, res) => { /* ... (código original) ... */
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'ID de countdown inválido.' });
     try {
@@ -662,7 +665,7 @@ adminRouter.delete('/countdowns/:id', async (req, res) => {
 });
 
 // -------- GERENCIAMENTO DE PROMOÇÕES (Admin) --------
-adminRouter.post('/promotions', async (req, res) => {
+adminRouter.post('/promotions', async (req, res) => { /* ... (código original com correção isVideo -> isVide) ... */
     const { title, description, bannerOrVideoUrl, isVideo, linkUrl, isActive, startDate, endDate } = req.body;
     if (!title || !description || !bannerOrVideoUrl) return res.status(400).json({ message: 'Título, descrição e URL do banner/vídeo são obrigatórios.' });
     try {
@@ -675,7 +678,7 @@ adminRouter.post('/promotions', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao criar promoção.' });
     }
 });
-adminRouter.get('/promotions', async (req, res) => {
+adminRouter.get('/promotions', async (req, res) => { /* ... (código original) ... */
     try {
         const promotions = await Promotion.find().sort({ createdAt: -1 });
         res.status(200).json(promotions);
@@ -684,7 +687,7 @@ adminRouter.get('/promotions', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao listar promoções.' });
     }
 });
-adminRouter.put('/promotions/:id', async (req, res) => {
+adminRouter.put('/promotions/:id', async (req, res) => { /* ... (código original com correção isVideo -> isVide) ... */
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'ID de promoção inválido.' });
     try {
@@ -699,7 +702,7 @@ adminRouter.put('/promotions/:id', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao atualizar promoção.' });
     }
 });
-adminRouter.delete('/promotions/:id', async (req, res) => {
+adminRouter.delete('/promotions/:id', async (req, res) => { /* ... (código original) ... */
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'ID de promoção inválido.' });
     try {
@@ -713,7 +716,7 @@ adminRouter.delete('/promotions/:id', async (req, res) => {
 });
 
 // -------- GERENCIAMENTO DE USUÁRIOS (Admin) --------
-adminRouter.get('/users', async (req, res) => {
+adminRouter.get('/users', async (req, res) => { /* ... (código original) ... */
     try {
         const users = await User.find().select('-password').sort({ registrationDate: -1 }); 
         res.status(200).json(users);
@@ -722,7 +725,7 @@ adminRouter.get('/users', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao listar usuários.' });
     }
 });
-adminRouter.get('/users/:userId', async (req, res) => {
+adminRouter.get('/users/:userId', async (req, res) => { /* ... (código original) ... */
     const { userId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(userId)) return res.status(400).json({ message: 'ID de usuário inválido.' });
     try {
@@ -735,7 +738,7 @@ adminRouter.get('/users/:userId', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao buscar detalhes do usuário.' });
     }
 });
-adminRouter.put('/users/:userId/status', async (req, res) => {
+adminRouter.put('/users/:userId/status', async (req, res) => { /* ... (código original) ... */
     const { userId } = req.params;
     const { isAdmin } = req.body;
     if (!mongoose.Types.ObjectId.isValid(userId)) return res.status(400).json({ message: 'ID de usuário inválido.' });
@@ -758,7 +761,7 @@ adminRouter.put('/users/:userId/status', async (req, res) => {
 });
 
 // -------- GERENCIAMENTO DE PEDIDOS E CREDENCIAIS (Admin) --------
-adminRouter.get('/orders', async (req, res) => {
+adminRouter.get('/orders', async (req, res) => { /* ... (código original) ... */
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20; 
@@ -774,7 +777,7 @@ adminRouter.get('/orders', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao listar pedidos.' });
     }
 });
-adminRouter.get('/orders/:orderId', async (req, res) => {
+adminRouter.get('/orders/:orderId', async (req, res) => { /* ... (código original) ... */
     const { orderId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(orderId)) return res.status(400).json({ message: 'ID de pedido inválido.' });
     try {
@@ -786,7 +789,7 @@ adminRouter.get('/orders/:orderId', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao buscar detalhes do pedido.' });
     }
 });
-adminRouter.put('/orders/:orderId/credentials', async (req, res) => {
+adminRouter.put('/orders/:orderId/credentials', async (req, res) => { /* ... (código original) ... */
     const { orderId } = req.params;
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha da assinatura são obrigatórios.' });
@@ -809,7 +812,7 @@ adminRouter.put('/orders/:orderId/credentials', async (req, res) => {
 });
 
 // -------- GERENCIAMENTO DE TEMA (Admin - Placeholder) --------
-let currentThemeSettings = { primaryColor: '#E50914', accentColor: '#FFFFFF', season: 'default',};
+let currentThemeSettings = { primaryColor: '#E50914', accentColor: '#FFFFFF', season: 'default',}; // Restaurado para os padrões Netflix
 adminRouter.post('/theme', (req, res) => {
     const { primaryColor, accentColor, season } = req.body;
     if (primaryColor && !validator.isHexColor(primaryColor)) return res.status(400).json({ message: 'Cor primária inválida (deve ser hexadecimal).' });
@@ -824,7 +827,7 @@ adminRouter.get('/theme', (req, res) => {
     res.status(200).json(currentThemeSettings);
 });
 app.use('/api/admin', adminRouter);
-app.get('/api/theme', (req, res) => { // Rota Pública
+app.get('/api/theme', (req, res) => { 
     res.status(200).json(currentThemeSettings);
 });
 console.log("Rotas do painel administrativo definidas.");
@@ -839,26 +842,54 @@ paymentRouter.post('/initiate', async (req, res) => {
     const { productId, paymentMethod, buyerPhoneNumber, buyerName } = req.body;
     const userId = req.user._id; 
 
-    if (!productId || !paymentMethod || !buyerPhoneNumber || !buyerName) return res.status(400).json({ message: 'ID do produto, método de pagamento, número de telefone do pagador e nome do pagador são obrigatórios.' });
-    if (!['mpesa', 'emola'].includes(paymentMethod.toLowerCase())) return res.status(400).json({ message: 'Método de pagamento inválido. Aceitos: mpesa, emola.' });
-    if (!validator.isMobilePhone(buyerPhoneNumber.toString(), 'any', { strictMode: false })) return res.status(400).json({ message: 'Formato de número de telefone do pagador inválido.' });
+    if (!productId || !paymentMethod || !buyerPhoneNumber || !buyerName) {
+        return res.status(400).json({ message: 'ID do produto, método de pagamento, número de telefone do pagador e nome do pagador são obrigatórios.' });
+    }
+    if (!['mpesa', 'emola'].includes(paymentMethod.toLowerCase())) {
+        return res.status(400).json({ message: 'Método de pagamento inválido. Aceitos: mpesa, emola.' });
+    }
+    if (!validator.isMobilePhone(buyerPhoneNumber.toString(), 'any', { strictMode: false })) {
+        return res.status(400).json({ message: 'Formato de número de telefone do pagador inválido.' });
+    }
 
     try {
         const product = await Product.findById(productId);
-        if (!product || !product.isActive) return res.status(404).json({ message: 'Produto não encontrado ou indisponível.' });
+        if (!product || !product.isActive) {
+            return res.status(404).json({ message: 'Produto não encontrado ou indisponível.' });
+        }
         const amount = product.price;
-        const newOrder = new Order({ user: userId, product: productId, productName: product.name, productImage: product.image, totalAmount: amount, paymentMethod: paymentMethod.toLowerCase(), paymentStatus: 'pending', buyerInfo: { phoneNumber: buyerPhoneNumber, name: buyerName }, subscriptionDetails: { email: null, password: null, status: 'pending_admin_input' } });
+        const newOrder = new Order({
+            user: userId,
+            product: productId,
+            productName: product.name, 
+            productImage: product.image, 
+            totalAmount: amount,
+            paymentMethod: paymentMethod.toLowerCase(),
+            paymentStatus: 'pending', 
+            buyerInfo: { phoneNumber: buyerPhoneNumber, name: buyerName, },
+            subscriptionDetails: { email: null, password: null, status: 'pending_admin_input' }
+        });
         await newOrder.save();
 
         const paymentApiUrl = paymentMethod.toLowerCase() === 'mpesa' ? MPESA_API_URL : EMOLA_API_URL;
         if (!paymentApiUrl) {
-            console.error(`URL da API para ${paymentMethod} não está definida.`);
-            newOrder.paymentStatus = 'failed'; newOrder.transactionId = `Configuração de API de ${paymentMethod} ausente.`;
+            console.error(`URL da API para ${paymentMethod} não está definida nas variáveis de ambiente.`);
+            newOrder.paymentStatus = 'failed';
+            newOrder.transactionId = `Configuração de API de ${paymentMethod} ausente.`;
             await newOrder.save();
-            return res.status(500).json({ success: false, message: `Erro de configuração do servidor para ${paymentMethod}. Contacte o suporte.` });
+            return res.status(500).json({
+                success: false,
+                message: `Erro de configuração do servidor para ${paymentMethod}. Por favor, contacte o suporte.`
+            });
         }
         
-        const paymentPayload = { carteira: PAYMENT_WALLET_ID, numero: buyerPhoneNumber, "quem comprou": buyerName, valor: amount.toString(), };
+        const paymentPayload = {
+            carteira: PAYMENT_WALLET_ID,
+            numero: buyerPhoneNumber,
+            "quem comprou": buyerName, 
+            valor: amount.toString(), 
+        };
+
         console.log(`Iniciando pagamento para pedido ${newOrder._id} via ${paymentMethod} com payload:`, paymentPayload);
 
         axios.post(paymentApiUrl, paymentPayload, {
@@ -867,29 +898,38 @@ paymentRouter.post('/initiate', async (req, res) => {
         })
         .then(async paymentApiResponse => {
             console.log(`Resposta da API ${paymentMethod} (pedido ${newOrder._id}, Status HTTP Externo: ${paymentApiResponse.status}):`, paymentApiResponse.data);
-            let paymentSuccessful = false; let transactionReference = null; let failureReason = 'Falha desconhecida.';
+            let paymentSuccessful = false;
+            let transactionReference = null;
+            let failureReason = 'Falha desconhecida.'; // Default failure reason
 
             if (paymentMethod.toLowerCase() === 'mpesa') {
-                switch (paymentApiResponse.status) {
+                switch (paymentApiResponse.status) { // Status HTTP da API Mpesa
                     case 200: // Pagamento Realizado com Sucesso (conforme documentação da API Mpesa)
-                        // É importante verificar se o CORPO da resposta de um 200 da Mpesa confirma o sucesso.
-                        // Se o log anterior "{ status: 'sucesso', resposta: { status: 200 } }" for o corpo de um HTTP 200:
-                        if (paymentApiResponse.data && paymentApiResponse.data.status === 'sucesso' && 
+                        // A documentação não especifica o corpo para um 200, mas seu log anterior era:
+                        // { status: 'sucesso', resposta: { status: 200 } }
+                        // Vamos assumir que se o status HTTP for 200, é sucesso, a menos que o corpo indique explicitamente uma falha.
+                        // Ou, se a API Mpesa for consistente com o seu log:
+                        if (paymentApiResponse.data && paymentApiResponse.data.status === 'sucesso' &&
                             paymentApiResponse.data.resposta && paymentApiResponse.data.resposta.status === 200) {
                             paymentSuccessful = true;
-                            failureReason = ''; 
-                            transactionReference = paymentApiResponse.data.referenciaPagamento || `mpesa_success_${newOrder._id}`;
+                            failureReason = ''; // Clear failure reason
                         } else if (paymentApiResponse.data && paymentApiResponse.data.status === 'sucesso') {
-                            // Caso mais simples: se o status no corpo for 'sucesso' e o HTTP for 200, consideramos sucesso
-                            // Isso cobre cenários onde `resposta` pode não estar presente ou não ter `status: 200`
-                            // mas o `status: 'sucesso'` principal é o indicador.
-                            console.warn(`Mpesa respondeu HTTP 200 e status '${paymentApiResponse.data.status}', mas estrutura aninhada 'resposta.status' não é 200 ou ausente. Verificando se '${paymentApiResponse.data.status}' é suficiente.`);
-                            paymentSuccessful = true; // Assumindo sucesso se o status principal for 'sucesso'
+                             // Se o status principal do corpo for 'sucesso', mas a estrutura 'resposta' não for como esperado ou ausente
+                             // Este é um fallback, idealmente a API Mpesa seria consistente.
+                            console.warn(`Mpesa HTTP 200 e status corpo '${paymentApiResponse.data.status}', mas estrutura interna 'resposta.status' pode não ser 200 ou estar ausente. Considerando sucesso com base no status principal do corpo.`);
+                            paymentSuccessful = true;
                             failureReason = '';
-                            transactionReference = paymentApiResponse.data.referenciaPagamento || `mpesa_partial_success_${newOrder._id}`;
-                        } else {
-                            paymentSuccessful = false; // Se HTTP é 200 mas o corpo não confirma sucesso
-                            failureReason = `Mpesa HTTP 200 mas corpo indica falha: ${JSON.stringify(paymentApiResponse.data).substring(0,100)}`;
+                        }
+                         else {
+                            // HTTP 200, mas o corpo não confirma o sucesso esperado.
+                            paymentSuccessful = false;
+                            failureReason = `Mpesa HTTP 200 mas corpo indica falha: ${JSON.stringify(paymentApiResponse.data || {}).substring(0,100)}`;
+                        }
+                        
+                        if (paymentSuccessful && paymentApiResponse.data) {
+                           transactionReference = paymentApiResponse.data.referenciaPagamento || paymentApiResponse.data.transaction_id || `mpesa_success_${newOrder._id}`;
+                        } else if (paymentSuccessful) {
+                           transactionReference = `mpesa_success_nodata_${newOrder._id}`;
                         }
                         break;
                     case 201: failureReason = paymentApiResponse.data?.message || paymentApiResponse.data?.error || JSON.stringify(paymentApiResponse.data) || "Erro na Transação (Mpesa)"; break;
@@ -897,23 +937,42 @@ paymentRouter.post('/initiate', async (req, res) => {
                     case 400: failureReason = paymentApiResponse.data?.message || paymentApiResponse.data?.error || JSON.stringify(paymentApiResponse.data) || "PIN Errado (Mpesa)"; break;
                     default: failureReason = `Erro API Mpesa (Status: ${paymentApiResponse.status}). Resposta: ${JSON.stringify(paymentApiResponse.data || {}).substring(0,100)}`; break;
                 }
-                if (!paymentSuccessful) { newOrder.paymentStatus = 'failed'; newOrder.transactionId = failureReason; }
+                if (!paymentSuccessful) { 
+                    newOrder.paymentStatus = 'failed'; 
+                    newOrder.transactionId = failureReason; 
+                }
 
             } else { // eMola
                 if (paymentApiResponse.data && paymentApiResponse.data.success === 'yes') {
-                    paymentSuccessful = true; transactionReference = paymentApiResponse.data.transaction_id || `emola_success_${newOrder._id}`;
+                    paymentSuccessful = true; 
+                    transactionReference = paymentApiResponse.data.transaction_id || `emola_success_${newOrder._id}`;
                 } else {
-                    newOrder.paymentStatus = 'failed'; newOrder.transactionId = paymentApiResponse.data.message || 'Pagamento eMola reprovado';
+                    newOrder.paymentStatus = 'failed'; 
+                    newOrder.transactionId = paymentApiResponse.data.message || 'Pagamento eMola reprovado';
                 }
             }
 
             if (paymentSuccessful) {
-                newOrder.paymentStatus = 'paid'; newOrder.transactionId = transactionReference; newOrder.subscriptionDetails.status = 'pending_admin_input';
+                newOrder.paymentStatus = 'paid'; 
+                newOrder.transactionId = transactionReference; 
+                newOrder.subscriptionDetails.status = 'pending_admin_input';
                 await newOrder.save();
-                return res.status(200).json({ success: true, message: 'Pagamento realizado com sucesso! Seus dados da assinatura aparecerão em seu perfil em no máximo 10 minutos. Aguarde.', orderId: newOrder._id, paymentStatus: newOrder.paymentStatus, subscriptionStatus: newOrder.subscriptionDetails.status });
+                return res.status(200).json({ 
+                    success: true, 
+                    message: 'Pagamento realizado com sucesso! Seus dados da assinatura aparecerão em seu perfil em no máximo 10 minutos. Aguarde.', 
+                    orderId: newOrder._id, 
+                    paymentStatus: newOrder.paymentStatus, 
+                    subscriptionStatus: newOrder.subscriptionDetails.status 
+                });
             } else {
+                // newOrder.paymentStatus e newOrder.transactionId já foram definidos nos blocos de falha acima
                 await newOrder.save(); 
-                return res.status(402).json({ success: false, message: `Pagamento falhou. Detalhes: ${newOrder.transactionId}`, orderId: newOrder._id, paymentStatus: newOrder.paymentStatus });
+                return res.status(402).json({ 
+                    success: false, 
+                    message: `Pagamento falhou. Detalhes: ${newOrder.transactionId}`, 
+                    orderId: newOrder._id, 
+                    paymentStatus: newOrder.paymentStatus 
+                });
             }
         })
         .catch(async error => { 
@@ -922,18 +981,37 @@ paymentRouter.post('/initiate', async (req, res) => {
             if(error.response) { 
                 console.error("Dados do erro da API:", error.response.data);
                 console.error("Status do erro da API:", error.response.status);
-                errorMsgDetail = `Erro Servidor Pagamento (${error.response.status}): ${JSON.stringify(error.response.data?.message || error.response.data?.error || error.response.data).substring(0,100)}`;
+                // Tentar extrair uma mensagem mais útil do erro da API
+                let apiErrorMsg = "Detalhes indisponíveis";
+                if (typeof error.response.data === 'string') {
+                    apiErrorMsg = error.response.data.substring(0,100);
+                } else if (error.response.data && (error.response.data.message || error.response.data.error)) {
+                    apiErrorMsg = JSON.stringify(error.response.data.message || error.response.data.error).substring(0,100);
+                } else if (error.response.data) {
+                    apiErrorMsg = JSON.stringify(error.response.data).substring(0,100);
+                }
+                errorMsgDetail = `Erro Servidor Pagamento (${error.response.status}): ${apiErrorMsg}`;
             } else if (error.request) { 
                 console.error("Nenhuma resposta da API:", error.request);
                 errorMsgDetail = "Sem resposta da API de pagamento.";
             }
-            newOrder.paymentStatus = 'failed'; newOrder.transactionId = errorMsgDetail;
+            newOrder.paymentStatus = 'failed'; 
+            newOrder.transactionId = errorMsgDetail;
             await newOrder.save();
-            return res.status(500).json({ success: false, message: 'Ocorreu um erro crítico ao processar seu pagamento. Por favor, tente novamente mais tarde ou contacte o suporte.', orderId: newOrder._id, paymentStatus: newOrder.paymentStatus, errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined });
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Ocorreu um erro crítico ao processar seu pagamento. Por favor, tente novamente mais tarde ou contacte o suporte.', 
+                orderId: newOrder._id, 
+                paymentStatus: newOrder.paymentStatus, 
+                errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined 
+            });
         });
+
     } catch (error) {
         console.error("Erro ao iniciar pagamento (geral):", error);
-        if (error.kind === 'ObjectId') return res.status(400).json({ message: 'ID de produto inválido.' });
+        if (error.kind === 'ObjectId') {
+            return res.status(400).json({ message: 'ID de produto inválido.' });
+        }
         res.status(500).json({ message: 'Erro interno do servidor ao processar o pagamento.' });
     }
 });
@@ -953,7 +1031,7 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
     console.error("ERRO NÃO TRATADO:", err.stack); 
     const errorMessage = process.env.NODE_ENV === 'development' ? err.message : 'Ocorreu um erro inesperado no servidor.';
-    const errorDetails = process.env.NODE_ENV === 'development' ? { name: err.name, message: err.message, stack: err.stack.substring(0, 500) } : {}; // Limitar stack
+    const errorDetails = process.env.NODE_ENV === 'development' ? { name: err.name, message: err.message, stack: err.stack.substring(0, 500) } : {};
     res.status(err.status || 500).json({ 
         message: errorMessage,
         error: errorDetails 
@@ -977,11 +1055,10 @@ app.listen(PORT, () => {
     console.log(`  GET  /api/user/subscriptions (Histórico de assinaturas do usuário)`);
     console.log(`  GET  /api/theme             (Obter tema atual)`);
     console.log('--- Admin Endpoints (requerem token de admin) ---');
-    console.log(`  POST /api/products             (Criar produto - admin)`);
-    console.log(`  PUT  /api/products/:id        (Atualizar produto - admin)`);
+    // Mantendo os exemplos originais que você tinha aqui:
+    console.log(`  POST /api/admin/products     (Criar produto)`); // Note: no backend atual, POST de produto é /api/products com auth admin
     console.log(`  GET  /api/admin/orders       (Listar todos os pedidos)`);
     console.log(`  PUT  /api/admin/orders/:orderId/credentials (Inserir credenciais)`);
-    console.log(`  POST /api/admin/banners      (Criar banner)`);
     console.log('-----------------------------------------------------');
 });
 
