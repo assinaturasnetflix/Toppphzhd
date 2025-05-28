@@ -46,9 +46,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // Definição da porta do servidor
 const PORT = process.env.PORT || 3000;
 
-// Removida a declaração duplicada de createDefaultAdmin aqui
-// A definição correta virá após os schemas.
-
 console.log("Configuração inicial do server.js carregada.");
 // server.js (continuação)
 
@@ -102,13 +99,13 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, "O nome do produto é obrigatório."],
         trim: true,
-        unique: true, 
+        unique: true,
     },
     description: {
         type: String,
         required: [true, "A descrição do produto é obrigatória."],
     },
-    image: { 
+    image: {
         type: String,
         required: [true, "A imagem do produto é obrigatória."],
     },
@@ -117,15 +114,15 @@ const productSchema = new mongoose.Schema({
         required: [true, "O preço do produto é obrigatório."],
         min: [0, "O preço não pode ser negativo."],
     },
-    category: { 
+    category: {
         type: String,
         required: [true, "A categoria do produto é obrigatória."],
     },
-    estimatedDeliveryTime: { 
+    estimatedDeliveryTime: {
         type: String,
         default: "Máximo 10 minutos",
     },
-    isActive: { 
+    isActive: {
         type: Boolean,
         default: true,
     },
@@ -149,8 +146,8 @@ const orderSchema = new mongoose.Schema({
         ref: 'Product',
         required: true,
     },
-    productName: String, 
-    productImage: String, 
+    productName: String,
+    productImage: String,
     quantity: {
         type: Number,
         default: 1,
@@ -159,16 +156,16 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
-    paymentMethod: { 
+    paymentMethod: {
         type: String,
         enum: ['mpesa', 'emola', 'pending'],
         default: 'pending',
     },
-    paymentStatus: { 
+    paymentStatus: {
         type: String,
         default: 'pending', // pending, paid, failed
     },
-    transactionId: { 
+    transactionId: {
         type: String,
     },
     orderDate: {
@@ -182,9 +179,9 @@ const orderSchema = new mongoose.Schema({
             type: String,
             enum: ['pending_admin_input', 'delivered', 'error_delivering'],
             default: 'pending_admin_input'
-        } 
+        }
     },
-    buyerInfo: { 
+    buyerInfo: {
         phoneNumber: String,
         name: String,
     }
@@ -195,21 +192,21 @@ const Order = mongoose.model('Order', orderSchema);
 
 // -------- ESQUEMA E MODELO DE BANNER (Banner) --------
 const bannerSchema = new mongoose.Schema({
-    title: { 
+    title: {
         type: String,
         trim: true,
     },
-    imageUrl: { 
+    imageUrl: {
         type: String,
         required: [true, "A URL da imagem do banner é obrigatória."],
     },
-    linkUrl: { 
+    linkUrl: {
         type: String,
         trim: true,
     },
-    type: { 
+    type: { // Usado para diferenciar banners (ex: 'main' para slider principal, 'promotion' para outros locais)
         type: String,
-        enum: ['main', 'promotion'],
+        enum: ['main', 'promotion', 'sidebar'],
         default: 'main',
     },
     isActive: {
@@ -236,7 +233,7 @@ const countdownSchema = new mongoose.Schema({
         type: Date,
         required: [true, "A data final do cronômetro é obrigatória."],
     },
-    description: { 
+    description: {
         type: String,
         trim: true,
     },
@@ -264,15 +261,15 @@ const promotionSchema = new mongoose.Schema({
         type: String,
         required: [true, "A descrição da promoção é obrigatória."],
     },
-    bannerOrVideoUrl: { 
+    bannerOrVideoUrl: {
         type: String,
         required: [true, "O banner ou vídeo da promoção é obrigatório."],
     },
-    isVide: { // Mantido como 'isVide' conforme o original
+    isVide: { // Mantido como 'isVide' conforme o original (lembre-se que o ideal seria 'isVideo')
         type: Boolean,
-        default: false, 
+        default: false,
     },
-    linkUrl: { 
+    linkUrl: {
         type: String,
         trim: true,
     },
@@ -284,7 +281,7 @@ const promotionSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-    endDate: {
+    endDate: { // Opcional, promoção pode não ter data de fim
         type: Date,
     },
     createdAt: {
@@ -297,9 +294,7 @@ const Promotion = mongoose.model('Promotion', promotionSchema);
 
 console.log("Schemas e Models do MongoDB definidos.");
 
-// Agora vamos implementar a função createDefaultAdmin
 async function createDefaultAdmin() {
-    // A mensagem "Verificando/criando admin padrão..." já foi logada no .then() da conexão do mongoose
     try {
         const adminExists = await User.findOne({ isAdmin: true });
         if (!adminExists) {
@@ -318,7 +313,7 @@ async function createDefaultAdmin() {
 
             const defaultAdmin = new User({
                 phoneNumber: adminPhoneNumber,
-                password: adminPassword, 
+                password: adminPassword,
                 isAdmin: true,
             });
             await defaultAdmin.save();
@@ -337,7 +332,7 @@ async function createDefaultAdmin() {
 
 const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; 
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (token == null) {
         return res.status(401).json({ message: 'Token não fornecido. Acesso não autorizado.' });
@@ -345,12 +340,12 @@ const authenticateToken = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        const user = await User.findById(decoded.userId).select('-password'); 
+        const user = await User.findById(decoded.userId).select('-password');
         if (!user) {
             return res.status(403).json({ message: 'Usuário não encontrado. Token inválido.' });
         }
-        req.user = user; 
-        next(); 
+        req.user = user;
+        next();
     } catch (err) {
         console.error("Erro na verificação do token:", err.message);
         if (err.name === 'TokenExpiredError') {
@@ -414,11 +409,12 @@ authRouter.post('/login', async (req, res) => {
 app.use('/api/auth', authRouter);
 console.log("Rotas de autenticação (cadastro e login) definidas.");
 
-// -------- ROTAS DE PRODUTOS (Protegidas - Admin para escrita) --------
+// -------- ROTAS DE PRODUTOS (Admin para escrita, Leitura pública) --------
 const productRouter = express.Router();
 
+// POST (Admin)
 productRouter.post('/', authenticateToken, isAdmin, async (req, res) => {
-    const { name, description, image, price, category, estimatedDeliveryTime, isActive } = req.body; 
+    const { name, description, image, price, category, estimatedDeliveryTime, isActive } = req.body;
     if (!name || !description || !image || price === undefined || !category) return res.status(400).json({ message: 'Todos os campos obrigatórios (nome, descrição, imagem, preço, categoria) devem ser fornecidos.' });
     if (typeof price !== 'number' || price < 0) return res.status(400).json({ message: 'O preço deve ser um número não negativo.' });
     try {
@@ -434,6 +430,7 @@ productRouter.post('/', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+// GET (Público)
 productRouter.get('/', async (req, res) => {
     try {
         const { activeOnly } = req.query;
@@ -447,6 +444,7 @@ productRouter.get('/', async (req, res) => {
     }
 });
 
+// GET :id (Público)
 productRouter.get('/:id', async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
@@ -459,6 +457,7 @@ productRouter.get('/:id', async (req, res) => {
     }
 });
 
+// PUT (Admin)
 productRouter.put('/:id', authenticateToken, isAdmin, async (req, res) => {
     const { name, description, image, price, category, estimatedDeliveryTime, isActive } = req.body;
     if (price !== undefined && (typeof price !== 'number' || price < 0)) return res.status(400).json({ message: 'O preço deve ser um número não negativo.' });
@@ -487,6 +486,7 @@ productRouter.put('/:id', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+// DELETE (Admin)
 productRouter.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
         const product = await Product.findByIdAndDelete(req.params.id);
@@ -501,26 +501,84 @@ productRouter.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
 app.use('/api/products', productRouter);
 console.log("Rotas CRUD para Produtos definidas.");
 
+
+// -------- ROTAS PÚBLICAS PARA BANNERS, PROMOÇÕES, COUNTDOWNS E TEMA --------
+app.get('/api/banners', async (req, res) => {
+    try {
+        const banners = await Banner.find({ isActive: true, type: 'main' }).sort({ createdAt: -1 });
+        res.status(200).json(banners);
+    } catch (error) {
+        console.error("Erro ao listar banners públicos:", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao listar banners públicos.' });
+    }
+});
+console.log("Rota pública GET /api/banners definida.");
+
+app.get('/api/promotions', async (req, res) => {
+    try {
+        const now = new Date();
+        const promotions = await Promotion.find({
+            isActive: true,
+            $or: [
+                { startDate: { $lte: now }, endDate: { $gte: now } },
+                { startDate: { $lte: now }, endDate: { $exists: false } }
+            ]
+        }).sort({ createdAt: -1 });
+        res.status(200).json(promotions);
+    } catch (error) {
+        console.error("Erro ao listar promoções públicas:", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao listar promoções públicas.' });
+    }
+});
+console.log("Rota pública GET /api/promotions definida.");
+
+app.get('/api/countdowns', async (req, res) => {
+    try {
+        const countdowns = await Countdown.find({ isActive: true, endDate: { $gte: new Date() } }).sort({ endDate: 1 });
+        res.status(200).json(countdowns);
+    } catch (error) {
+        console.error("Erro ao listar countdowns públicos:", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao listar countdowns públicos.' });
+    }
+});
+console.log("Rota pública GET /api/countdowns definida.");
+
+// Rota pública para o tema (já existia uma, mantida aqui para centralizar rotas públicas)
+// A rota adminRouter.get('/theme', ...) continua a existir para admins, mas esta é a pública.
+// Se ambas tiverem o mesmo caminho, a ordem de declaração pode importar, mas
+// esta é /api/theme e a de admin é /api/admin/theme, então não há conflito.
+// A rota `/api/theme` que estava no adminRouter foi movida para ser pública.
+// A configuração do tema continua sendo feita via /api/admin/theme (POST).
+let currentThemeSettings = { primaryColor: '#E50914', accentColor: '#FFFFFF', season: 'default',}; // Mantido em memória como antes
+app.get('/api/theme', (req, res) => {
+    res.status(200).json(currentThemeSettings);
+});
+console.log("Rota pública GET /api/theme definida.");
+
+
 // -------- ROTAS DO PERFIL DO USUÁRIO (Protegidas - Usuário Logado) --------
 const userRouter = express.Router();
+userRouter.use(authenticateToken); // Todas as rotas aqui precisam de token
 
-userRouter.get('/profile', authenticateToken, async (req, res) => {
+userRouter.get('/profile', async (req, res) => { // authenticateToken já preencheu req.user
     res.status(200).json({ id: req.user._id, phoneNumber: req.user.phoneNumber, registrationDate: req.user.registrationDate, isAdmin: req.user.isAdmin });
 });
 
-userRouter.put('/profile', authenticateToken, async (req, res) => {
+userRouter.put('/profile', async (req, res) => { // authenticateToken já preencheu req.user
     const { currentPassword, newPassword } = req.body;
     if (!newPassword || newPassword.length < 6) return res.status(400).json({ message: 'A nova senha deve ter pelo menos 6 caracteres.' });
     try {
-        const user = await User.findById(req.user._id); 
-        if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' }); // Improvável se o token é válido
         if (currentPassword) {
             const isMatch = await user.comparePassword(currentPassword);
             if (!isMatch) return res.status(401).json({ message: 'Senha atual incorreta.' });
         } else {
+             // Apenas admin pode alterar senha de outro usuário sem a senha atual,
+             // mas aqui é o próprio usuário alterando. Se ele não for admin e não passar a senha atual, erro.
             if (!req.user.isAdmin) return res.status(400).json({ message: 'Senha atual é obrigatória para alterar a senha.' });
         }
-        user.password = newPassword; 
+        user.password = newPassword;
         await user.save();
         res.status(200).json({ message: 'Senha atualizada com sucesso.' });
     } catch (error) {
@@ -530,9 +588,9 @@ userRouter.put('/profile', authenticateToken, async (req, res) => {
     }
 });
 
-userRouter.get('/subscriptions', authenticateToken, async (req, res) => {
+userRouter.get('/subscriptions', async (req, res) => { // authenticateToken já preencheu req.user
     try {
-        const orders = await Order.find({ user: req.user._id }).populate('product', 'name image category').sort({ orderDate: -1 }); 
+        const orders = await Order.find({ user: req.user._id }).populate('product', 'name image category').sort({ orderDate: -1 });
         res.status(200).json(orders);
     } catch (error) {
         console.error("Erro ao buscar histórico de assinaturas:", error);
@@ -540,7 +598,7 @@ userRouter.get('/subscriptions', authenticateToken, async (req, res) => {
     }
 });
 
-userRouter.get('/subscription/:orderId/credentials', authenticateToken, async (req, res) => {
+userRouter.get('/subscription/:orderId/credentials', async (req, res) => { // authenticateToken já preencheu req.user
     const { orderId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(orderId)) return res.status(400).json({ message: 'ID do pedido inválido.' });
     try {
@@ -550,7 +608,7 @@ userRouter.get('/subscription/:orderId/credentials', authenticateToken, async (r
         else if (order.paymentStatus === 'paid' && order.subscriptionDetails.status === 'pending_admin_input') return res.status(202).json({ orderId: order._id, productName: order.productName, message: "Seus dados da assinatura aparecerão aqui em no máximo 10 minutos. Aguarde.", status: order.subscriptionDetails.status });
         else if (order.paymentStatus !== 'paid') return res.status(402).json({ orderId: order._id, productName: order.productName, message: "O pagamento deste pedido ainda não foi confirmado ou falhou.", status: order.paymentStatus });
         else if (order.subscriptionDetails.status === 'error_delivering') return res.status(500).json({ message: "Ocorreu um erro ao processar os detalhes da sua assinatura. Contacte o suporte.", status: order.subscriptionDetails.status});
-        else return res.status(204).json({ message: "Detalhes da assinatura ainda não disponíveis ou houve um erro.", status: order.subscriptionDetails.status }); // Mantido o status original
+        else return res.status(204).json(); // Sem conteúdo (mantido status original de um caso anterior)
     } catch (error) {
         console.error("Erro ao buscar credenciais da assinatura:", error);
         res.status(500).json({ message: 'Erro interno do servidor ao buscar credenciais.' });
@@ -559,11 +617,12 @@ userRouter.get('/subscription/:orderId/credentials', authenticateToken, async (r
 app.use('/api/user', userRouter);
 console.log("Rotas do perfil do usuário definidas.");
 
+
 // ========================================
 // ROTAS DO PAINEL ADMINISTRATIVO
 // ========================================
 const adminRouter = express.Router();
-adminRouter.use(authenticateToken, isAdmin);
+adminRouter.use(authenticateToken, isAdmin); // Todas as rotas aqui precisam de token de admin
 
 // -------- GERENCIAMENTO DE BANNERS (Admin) --------
 adminRouter.post('/banners', async (req, res) => {
@@ -579,13 +638,13 @@ adminRouter.post('/banners', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao criar banner.' });
     }
 });
-adminRouter.get('/banners', async (req, res) => {
+adminRouter.get('/banners', async (req, res) => { // Admin vê todos os banners, inclusive inativos ou de outros tipos
     try {
         const banners = await Banner.find().sort({ createdAt: -1 });
         res.status(200).json(banners);
     } catch (error) {
-        console.error("Erro ao listar banners:", error);
-        res.status(500).json({ message: 'Erro interno do servidor ao listar banners.' });
+        console.error("Erro ao listar banners (admin):", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao listar banners (admin).' });
     }
 });
 adminRouter.put('/banners/:id', async (req, res) => {
@@ -628,13 +687,13 @@ adminRouter.post('/countdowns', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao criar countdown.' });
     }
 });
-adminRouter.get('/countdowns', async (req, res) => {
+adminRouter.get('/countdowns', async (req, res) => { // Admin vê todos os countdowns
     try {
         const countdowns = await Countdown.find().sort({ createdAt: -1 });
         res.status(200).json(countdowns);
     } catch (error) {
-        console.error("Erro ao listar countdowns:", error);
-        res.status(500).json({ message: 'Erro interno do servidor ao listar countdowns.' });
+        console.error("Erro ao listar countdowns (admin):", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao listar countdowns (admin).' });
     }
 });
 adminRouter.put('/countdowns/:id', async (req, res) => {
@@ -665,10 +724,11 @@ adminRouter.delete('/countdowns/:id', async (req, res) => {
 
 // -------- GERENCIAMENTO DE PROMOÇÕES (Admin) --------
 adminRouter.post('/promotions', async (req, res) => {
-    const { title, description, bannerOrVideoUrl, isVideo, linkUrl, isActive, startDate, endDate } = req.body; // isVideo aqui
+    const { title, description, bannerOrVideoUrl, isVideo, linkUrl, isActive, startDate, endDate } = req.body;
     if (!title || !description || !bannerOrVideoUrl) return res.status(400).json({ message: 'Título, descrição e URL do banner/vídeo são obrigatórios.' });
     try {
-        const newPromotion = new Promotion({ title, description, bannerOrVideoUrl, isVide: isVideo, linkUrl, isActive, startDate, endDate }); // isVide no schema
+        // O frontend envia 'isVideo', mas o schema tem 'isVide'
+        const newPromotion = new Promotion({ title, description, bannerOrVideoUrl, isVide: isVideo, linkUrl, isActive, startDate, endDate });
         await newPromotion.save();
         res.status(201).json({ message: 'Promoção criada com sucesso!', promotion: newPromotion });
     } catch (error) {
@@ -677,13 +737,13 @@ adminRouter.post('/promotions', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao criar promoção.' });
     }
 });
-adminRouter.get('/promotions', async (req, res) => {
+adminRouter.get('/promotions', async (req, res) => { // Admin vê todas as promoções
     try {
         const promotions = await Promotion.find().sort({ createdAt: -1 });
         res.status(200).json(promotions);
     } catch (error) {
-        console.error("Erro ao listar promoções:", error);
-        res.status(500).json({ message: 'Erro interno do servidor ao listar promoções.' });
+        console.error("Erro ao listar promoções (admin):", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao listar promoções (admin).' });
     }
 });
 adminRouter.put('/promotions/:id', async (req, res) => {
@@ -691,7 +751,10 @@ adminRouter.put('/promotions/:id', async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'ID de promoção inválido.' });
     try {
         const updateData = { ...req.body };
-        if (req.body.isVideo !== undefined) { updateData.isVide = req.body.isVideo; delete updateData.isVideo; }
+        if (req.body.isVideo !== undefined) { // Frontend envia isVideo, schema tem isVide
+            updateData.isVide = req.body.isVideo;
+            delete updateData.isVideo; // Remove isVideo do objeto de atualização para não dar erro no schema
+        }
         const updatedPromotion = await Promotion.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
         if (!updatedPromotion) return res.status(404).json({ message: 'Promoção não encontrada.' });
         res.status(200).json({ message: 'Promoção atualizada com sucesso!', promotion: updatedPromotion });
@@ -717,7 +780,7 @@ adminRouter.delete('/promotions/:id', async (req, res) => {
 // -------- GERENCIAMENTO DE USUÁRIOS (Admin) --------
 adminRouter.get('/users', async (req, res) => {
     try {
-        const users = await User.find().select('-password').sort({ registrationDate: -1 }); 
+        const users = await User.find().select('-password').sort({ registrationDate: -1 });
         res.status(200).json(users);
     } catch (error) {
         console.error("Erro ao listar usuários:", error);
@@ -739,18 +802,21 @@ adminRouter.get('/users/:userId', async (req, res) => {
 });
 adminRouter.put('/users/:userId/status', async (req, res) => {
     const { userId } = req.params;
-    const { isAdmin } = req.body;
+    const { isAdmin: newIsAdminStatus } = req.body; // Renomeado para evitar conflito com o middleware isAdmin
     if (!mongoose.Types.ObjectId.isValid(userId)) return res.status(400).json({ message: 'ID de usuário inválido.' });
-    if (typeof isAdmin !== 'boolean' && isAdmin !== undefined) return res.status(400).json({ message: 'O status de administrador (isAdmin) deve ser um booleano.' });
+    if (typeof newIsAdminStatus !== 'boolean' && newIsAdminStatus !== undefined) return res.status(400).json({ message: 'O status de administrador (isAdmin) deve ser um booleano.' });
     try {
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
-        if (req.user._id.equals(user._id) && user.isAdmin && isAdmin === false) {
+        const userToUpdate = await User.findById(userId);
+        if (!userToUpdate) return res.status(404).json({ message: 'Usuário não encontrado.' });
+
+        // Lógica para não se auto-remover como último admin
+        if (req.user._id.equals(userToUpdate._id) && userToUpdate.isAdmin && newIsAdminStatus === false) {
              const adminCount = await User.countDocuments({ isAdmin: true });
              if (adminCount <= 1) return res.status(400).json({ message: 'Não é possível remover o status de administrador do único administrador existente.' });
         }
-        if (isAdmin !== undefined) user.isAdmin = isAdmin;
-        await user.save();
+
+        if (newIsAdminStatus !== undefined) userToUpdate.isAdmin = newIsAdminStatus;
+        await userToUpdate.save();
         const updatedUser = await User.findById(userId).select('-password');
         res.status(200).json({ message: 'Status do usuário atualizado com sucesso.', user: updatedUser });
     } catch (error) {
@@ -763,7 +829,7 @@ adminRouter.put('/users/:userId/status', async (req, res) => {
 adminRouter.get('/orders', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20; 
+        const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
         let filter = {};
         if (req.query.paymentStatus) filter.paymentStatus = req.query.paymentStatus;
@@ -798,7 +864,7 @@ adminRouter.put('/orders/:orderId/credentials', async (req, res) => {
         if (!order) return res.status(404).json({ message: 'Pedido não encontrado.' });
         if (order.paymentStatus !== 'paid') return res.status(400).json({ message: 'Não é possível adicionar credenciais a um pedido com pagamento pendente ou falhado.' });
         order.subscriptionDetails.email = email;
-        order.subscriptionDetails.password = password; 
+        order.subscriptionDetails.password = password; // ATENÇÃO: Armazenar senhas de terceiros é um risco.
         order.subscriptionDetails.status = 'delivered';
         await order.save();
         const updatedOrder = await Order.findById(orderId).populate('user', 'phoneNumber').populate('product', 'name');
@@ -811,35 +877,33 @@ adminRouter.put('/orders/:orderId/credentials', async (req, res) => {
 });
 
 // -------- GERENCIAMENTO DE TEMA (Admin - Placeholder) --------
-let currentThemeSettings = { primaryColor: '#E50914', accentColor: '#FFFFFF', season: 'default',};
+// `currentThemeSettings` foi movido para o escopo global para ser acessível pela rota pública `/api/theme`
 adminRouter.post('/theme', (req, res) => {
     const { primaryColor, accentColor, season } = req.body;
     if (primaryColor && !validator.isHexColor(primaryColor)) return res.status(400).json({ message: 'Cor primária inválida (deve ser hexadecimal).' });
     if (accentColor && !validator.isHexColor(accentColor)) return res.status(400).json({ message: 'Cor de destaque inválida (deve ser hexadecimal).' });
     if (primaryColor) currentThemeSettings.primaryColor = primaryColor;
     if (accentColor) currentThemeSettings.accentColor = accentColor;
-    if (season) currentThemeSettings.season = season; 
+    if (season) currentThemeSettings.season = season;
     console.log("Configurações de tema atualizadas para:", currentThemeSettings);
     res.status(200).json({ message: 'Configurações de tema atualizadas com sucesso (simulado).', theme: currentThemeSettings });
 });
-adminRouter.get('/theme', (req, res) => {
+adminRouter.get('/theme', (req, res) => { // Rota de admin para obter tema (pode ser útil para o painel de admin)
     res.status(200).json(currentThemeSettings);
 });
 app.use('/api/admin', adminRouter);
-app.get('/api/theme', (req, res) => { 
-    res.status(200).json(currentThemeSettings);
-});
 console.log("Rotas do painel administrativo definidas.");
+
 
 // ============================
 // ROTAS DE PAGAMENTO
 // ============================
 const paymentRouter = express.Router();
-paymentRouter.use(authenticateToken);
+paymentRouter.use(authenticateToken); // Todas as rotas de pagamento precisam de autenticação
 
 paymentRouter.post('/initiate', async (req, res) => {
     const { productId, paymentMethod, buyerPhoneNumber, buyerName } = req.body;
-    const userId = req.user._id; 
+    const userId = req.user._id;
 
     if (!productId || !paymentMethod || !buyerPhoneNumber || !buyerName) {
         return res.status(400).json({ message: 'ID do produto, método de pagamento, número de telefone do pagador e nome do pagador são obrigatórios.' });
@@ -860,11 +924,11 @@ paymentRouter.post('/initiate', async (req, res) => {
         const newOrder = new Order({
             user: userId,
             product: productId,
-            productName: product.name, 
-            productImage: product.image, 
+            productName: product.name,
+            productImage: product.image,
             totalAmount: amount,
             paymentMethod: paymentMethod.toLowerCase(),
-            paymentStatus: 'pending', 
+            paymentStatus: 'pending',
             buyerInfo: { phoneNumber: buyerPhoneNumber, name: buyerName, },
             subscriptionDetails: { email: null, password: null, status: 'pending_admin_input' }
         });
@@ -881,39 +945,39 @@ paymentRouter.post('/initiate', async (req, res) => {
                 message: `Erro de configuração do servidor para ${paymentMethod}. Por favor, contacte o suporte.`
             });
         }
-        
+
         const paymentPayload = {
             carteira: PAYMENT_WALLET_ID,
             numero: buyerPhoneNumber,
-            "quem comprou": buyerName, 
-            valor: amount.toString(), 
+            "quem comprou": buyerName,
+            valor: amount.toString(),
         };
 
         console.log(`Iniciando pagamento para pedido ${newOrder._id} via ${paymentMethod} com payload:`, paymentPayload);
 
         axios.post(paymentApiUrl, paymentPayload, {
             headers: { 'Content-Type': 'application/json' },
-            validateStatus: (status) => status >= 200 && status < 500, // Processar respostas 2xx e 4xx no .then()
+            validateStatus: (status) => status >= 200 && status < 500,
         })
         .then(async paymentApiResponse => {
-            console.log(`Resposta da API ${paymentMethod} (pedido ${newOrder._id}, Status HTTP Externo: ${paymentApiResponse.status}):`, JSON.stringify(paymentApiResponse.data, null, 2)); // Log formatado
+            console.log(`Resposta da API ${paymentMethod} (pedido ${newOrder._id}, Status HTTP Externo: ${paymentApiResponse.status}):`, JSON.stringify(paymentApiResponse.data, null, 2));
             let paymentSuccessful = false;
             let transactionReference = null;
-            let failureReason = 'Falha desconhecida.'; 
+            let failureReason = 'Falha desconhecida.';
 
             if (paymentMethod.toLowerCase() === 'mpesa') {
                 const mpesaData = paymentApiResponse.data;
                 console.log("Processando resposta MPESA. Status HTTP da API Externa:", paymentApiResponse.status);
 
-                switch (paymentApiResponse.status) { // Status HTTP da API Mpesa
-                    case 200: 
+                switch (paymentApiResponse.status) {
+                    case 200:
                         console.log("MPESA: Entrou no case 200 HTTP.");
                         if (mpesaData && typeof mpesaData.status === 'string' && mpesaData.status.toLowerCase() === 'success') {
                             console.log("MPESA: Corpo da resposta tem 'status: success'.");
                             if (mpesaData.resposta && typeof mpesaData.resposta.status === 'number' && mpesaData.resposta.status === 200) {
                                 console.log("MPESA: Estrutura aninhada 'resposta.status' é 200. SUCESSO COMPLETO.");
                                 paymentSuccessful = true;
-                                failureReason = ''; 
+                                failureReason = '';
                                 transactionReference = mpesaData.referenciaPagamento || mpesaData.transaction_id || `mpesa_success_${newOrder._id}`;
                             } else if (mpesaData.resposta && typeof mpesaData.resposta.status === 'number' && mpesaData.resposta.status !== 200) {
                                 console.log(`MPESA: Corpo status 'success', mas resposta.status aninhada é ${mpesaData.resposta.status}. Considerando FALHA.`);
@@ -940,47 +1004,47 @@ paymentRouter.post('/initiate', async (req, res) => {
                     case 400: failureReason = mpesaData?.message || mpesaData?.error || JSON.stringify(mpesaData) || "PIN Errado (Mpesa)"; break;
                     default: failureReason = `Erro API Mpesa (Status: ${paymentApiResponse.status}). Resposta: ${JSON.stringify(mpesaData || {}).substring(0,100)}`; break;
                 }
-                if (!paymentSuccessful) { 
-                    newOrder.paymentStatus = 'failed'; 
-                    newOrder.transactionId = failureReason; 
+                if (!paymentSuccessful) {
+                    newOrder.paymentStatus = 'failed';
+                    newOrder.transactionId = failureReason;
                 }
 
             } else { // eMola
                 if (paymentApiResponse.data && paymentApiResponse.data.success === 'yes') {
-                    paymentSuccessful = true; 
+                    paymentSuccessful = true;
                     transactionReference = paymentApiResponse.data.transaction_id || `emola_success_${newOrder._id}`;
                 } else {
-                    newOrder.paymentStatus = 'failed'; 
+                    newOrder.paymentStatus = 'failed';
                     newOrder.transactionId = paymentApiResponse.data.message || 'Pagamento eMola reprovado';
                 }
             }
 
             if (paymentSuccessful) {
-                newOrder.paymentStatus = 'paid'; 
-                newOrder.transactionId = transactionReference; 
+                newOrder.paymentStatus = 'paid';
+                newOrder.transactionId = transactionReference;
                 newOrder.subscriptionDetails.status = 'pending_admin_input';
                 await newOrder.save();
-                return res.status(200).json({ 
-                    success: true, 
-                    message: 'Pagamento realizado com sucesso! Seus dados da assinatura aparecerão em seu perfil em no máximo 10 minutos. Aguarde.', 
-                    orderId: newOrder._id, 
-                    paymentStatus: newOrder.paymentStatus, 
-                    subscriptionStatus: newOrder.subscriptionDetails.status 
+                return res.status(200).json({
+                    success: true,
+                    message: 'Pagamento realizado com sucesso! Seus dados da assinatura aparecerão em seu perfil em no máximo 10 minutos. Aguarde.',
+                    orderId: newOrder._id,
+                    paymentStatus: newOrder.paymentStatus,
+                    subscriptionStatus: newOrder.subscriptionDetails.status
                 });
             } else {
-                await newOrder.save(); 
-                return res.status(402).json({ 
-                    success: false, 
-                    message: `Pagamento falhou. Detalhes: ${newOrder.transactionId}`, 
-                    orderId: newOrder._id, 
-                    paymentStatus: newOrder.paymentStatus 
+                await newOrder.save();
+                return res.status(402).json({
+                    success: false,
+                    message: `Pagamento falhou. Detalhes: ${newOrder.transactionId}`,
+                    orderId: newOrder._id,
+                    paymentStatus: newOrder.paymentStatus
                 });
             }
         })
-        .catch(async error => { 
+        .catch(async error => {
             console.error(`ERRO AXIOS ao chamar API de ${paymentMethod} para pedido ${newOrder._id}:`, error.message);
             let errorMsgDetail = `Erro de comunicação com API de pagamento: ${error.message.substring(0, 100)}`;
-            if(error.response) { 
+            if(error.response) {
                 console.error("Dados do erro da API:", error.response.data);
                 console.error("Status do erro da API:", error.response.status);
                 let apiErrorMsg = "Detalhes indisponíveis";
@@ -992,19 +1056,19 @@ paymentRouter.post('/initiate', async (req, res) => {
                     apiErrorMsg = JSON.stringify(error.response.data).substring(0,100);
                 }
                 errorMsgDetail = `Erro Servidor Pagamento (${error.response.status}): ${apiErrorMsg}`;
-            } else if (error.request) { 
+            } else if (error.request) {
                 console.error("Nenhuma resposta da API:", error.request);
                 errorMsgDetail = "Sem resposta da API de pagamento.";
             }
-            newOrder.paymentStatus = 'failed'; 
+            newOrder.paymentStatus = 'failed';
             newOrder.transactionId = errorMsgDetail;
             await newOrder.save();
-            return res.status(500).json({ 
-                success: false, 
-                message: 'Ocorreu um erro crítico ao processar seu pagamento. Por favor, tente novamente mais tarde ou contacte o suporte.', 
-                orderId: newOrder._id, 
-                paymentStatus: newOrder.paymentStatus, 
-                errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined 
+            return res.status(500).json({
+                success: false,
+                message: 'Ocorreu um erro crítico ao processar seu pagamento. Por favor, tente novamente mais tarde ou contacte o suporte.',
+                orderId: newOrder._id,
+                paymentStatus: newOrder.paymentStatus,
+                errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         });
 
@@ -1030,12 +1094,12 @@ app.use((req, res, next) => {
 // MANIPULADOR DE ERROS GLOBAL
 // ============================
 app.use((err, req, res, next) => {
-    console.error("ERRO NÃO TRATADO:", err.stack); 
+    console.error("ERRO NÃO TRATADO:", err.stack);
     const errorMessage = process.env.NODE_ENV === 'development' ? err.message : 'Ocorreu um erro inesperado no servidor.';
     const errorDetails = process.env.NODE_ENV === 'development' ? { name: err.name, message: err.message, stack: err.stack.substring(0, 500) } : {};
-    res.status(err.status || 500).json({ 
+    res.status(err.status || 500).json({
         message: errorMessage,
-        error: errorDetails 
+        error: errorDetails
     });
 });
 
@@ -1049,19 +1113,26 @@ app.listen(PORT, () => {
     console.log('Endpoints disponíveis (exemplos):');
     console.log(`  POST /api/auth/register     (Cadastro de usuário)`);
     console.log(`  POST /api/auth/login        (Login de usuário)`);
-    console.log(`  GET  /api/products          (Listar produtos)`);
-    console.log(`  GET  /api/products?activeOnly=true (Listar produtos ativos)`);
-    console.log(`  POST /api/payment/initiate  (Iniciar pagamento)`);
-    console.log(`  GET  /api/user/profile      (Perfil do usuário logado)`);
-    console.log(`  GET  /api/user/subscriptions (Histórico de assinaturas do usuário)`);
-    console.log(`  GET  /api/theme             (Obter tema atual)`);
+    console.log(`  GET  /api/products          (Listar produtos - público)`);
+    console.log(`  GET  /api/products?activeOnly=true (Listar produtos ativos - público)`);
+    console.log(`  GET  /api/banners           (Listar banners principais ativos - público)`);
+    console.log(`  GET  /api/promotions        (Listar promoções ativas - público)`);
+    console.log(`  GET  /api/countdowns        (Listar countdowns ativos - público)`);
+    console.log(`  GET  /api/theme             (Obter tema atual - público)`);
+    console.log(`  POST /api/payment/initiate  (Iniciar pagamento - requer token usuário)`);
+    console.log(`  GET  /api/user/profile      (Perfil do usuário logado - requer token usuário)`);
+    console.log(`  GET  /api/user/subscriptions (Histórico de assinaturas - requer token usuário)`);
     console.log('--- Admin Endpoints (requerem token de admin) ---');
-    console.log(`  POST /api/products             (Criar produto - admin)`); // Rota de admin para produtos
-    console.log(`  PUT  /api/products/:id        (Atualizar produto - admin)`);// Rota de admin para produtos
-    console.log(`  GET  /api/admin/orders       (Listar todos os pedidos)`);
+    console.log(`  POST /api/admin/products          (Criar produto)`);
+    console.log(`  PUT  /api/admin/products/:id     (Atualizar produto)`);
+    console.log(`  GET  /api/admin/orders        (Listar todos os pedidos)`);
     console.log(`  PUT  /api/admin/orders/:orderId/credentials (Inserir credenciais)`);
-    console.log(`  POST /api/admin/banners      (Criar banner)`);
+    console.log(`  GET  /api/admin/banners       (Listar todos banners - admin)`);
+    console.log(`  POST /api/admin/banners       (Criar banner)`);
+    console.log(`  GET  /api/admin/promotions    (Listar todas promoções - admin)`);
+    console.log(`  POST /api/admin/promotions    (Criar promoção)`);
+    console.log(`  GET  /api/admin/countdowns    (Listar todos countdowns - admin)`);
+    console.log(`  POST /api/admin/countdowns    (Criar countdown)`);
+    console.log(`  POST /api/admin/theme         (Atualizar tema)`);
     console.log('-----------------------------------------------------');
 });
-
-// Fim do arquivo server.js
